@@ -9,12 +9,14 @@ use_gap_fixed = true # for rebind-analysis to use gap-fixed
 filter_by_binding_prop = true # filter tracks after gap-fixes
 run_visualizer = true # run visualizer after analysis
 run_MSD_calculations = true # run MSD calculations after analysis
+bacteria_analysis = true # the analysis is run on small cells, additional filter conditions apply
 
 [track-sorting]
 allowed_gap_max = 10
 allowed_track_length_min = 60
 allowed_track_length_max = 20000
 dist_range = 5
+# if bacteria_analysis = True
 allowed_overlap = 30 # allowed total repeated frames in tracks in a cell, eliminate all tracks if exceeds
 concurrent_max = 10 # max concurrent frames in *different* tracks in a cell, eliminate the frames if exceeds.
 

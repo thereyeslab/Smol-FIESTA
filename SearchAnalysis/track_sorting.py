@@ -21,6 +21,8 @@ Parameters:
     dist_range: how many frames before/after to consider for distance calculations
     allowed_overlap: allowed total repeated frames in tracks in a cell, eliminate all tracks if exceeds
     concurrent_max: max concurrent frames in *different* tracks in a cell, eliminate the frames if exceeds
+    conditional:
+        bacteria_analysis: the analysis is run on small cells, additional filter conditions apply
 """
 
 import numpy as np
@@ -57,6 +59,7 @@ def main(config_path:str = None):
     allowed_overlap = configs['track-sorting'].get('allowed_overlap', 'None')
     concurrent_max = configs['track-sorting'].get('concurrent_max', 'None')
     allowed_concurrent = configs['track-sorting'].get('allowed_concurrent', 'None')
+    bacteria_analysis = configs['toggle'].get('bacteria_analysis', True)
 
     dist_none = float('inf')
 
@@ -118,32 +121,33 @@ def main(config_path:str = None):
             tracks_cell = track_separation(spots_cell)
             print_log('\t\t: # Tracks in Cell:', len(tracks_cell))
 
-            # Eliminate repeated frames in the same track <- allowed_overlap parameter
-            _ = 0
-            for k in range(len(tracks_cell)):
-                tracks_cell[k], __ = eliminate_repeated_frames(tracks_cell[k])
-                _ += __
-            print_log('\t\t: # Repeated Spots eliminated:', _)
-            if isinstance(allowed_overlap, str):
-                allowed_overlap = 0
-
-            if _ > allowed_overlap:
-                print_log('\t\t: * Overlap within track exceeds threshold: Aborting Cell')
-                continue
-
-            total_concurrent, _ = tabulate_frame_count(tracks_cell)
-            if isinstance(allowed_concurrent, str):
-                allowed_concurrent = 0
-            if total_concurrent > allowed_concurrent:
-                print_log('\t\t: * Overlap within track exceeds threshold: Aborting Cell')
-                continue
-
-            # Eliminate repeated frames in different tracks if length exceeds <- concurrent_max parameter
-            removal_queue, frame_counts = concurrent_count(tracks_cell, concurrent_max)
-            if len(removal_queue) > 0:
+            if bacteria_analysis:
+                # Eliminate repeated frames in the same track <- allowed_overlap parameter
+                _ = 0
                 for k in range(len(tracks_cell)):
-                    tracks_cell[k] = remove_frames(tracks_cell[k], removal_queue)
-                print_log('\t\t: # Concurrent Frames removed:', len(removal_queue))
+                    tracks_cell[k], __ = eliminate_repeated_frames(tracks_cell[k])
+                    _ += __
+                print_log('\t\t: # Repeated Spots eliminated:', _)
+                if isinstance(allowed_overlap, str):
+                    allowed_overlap = 0
+
+                if _ > allowed_overlap:
+                    print_log('\t\t: * Overlap within track exceeds threshold: Aborting Cell')
+                    continue
+
+                total_concurrent, _ = tabulate_frame_count(tracks_cell)
+                if isinstance(allowed_concurrent, str):
+                    allowed_concurrent = 0
+                if total_concurrent > allowed_concurrent:
+                    print_log('\t\t: * Overlap within track exceeds threshold: Aborting Cell')
+                    continue
+
+                # Eliminate repeated frames in different tracks if length exceeds <- concurrent_max parameter
+                removal_queue, frame_counts = concurrent_count(tracks_cell, concurrent_max)
+                if len(removal_queue) > 0:
+                    for k in range(len(tracks_cell)):
+                        tracks_cell[k] = remove_frames(tracks_cell[k], removal_queue)
+                    print_log('\t\t: # Concurrent Frames removed:', len(removal_queue))
 
             tracks_ind = []
             _ = 0
