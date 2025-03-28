@@ -1,28 +1,28 @@
 [path]
-csv_path = 'D:\Microscopy\SMSNEW\_ANIMAL_CELL_DATA\Rif1\AnalysisRebindCBC_start0_Quality2p5_All' # csv from trackmate
-mask_path = 'D:\Microscopy\SMSNEW\_ANIMAL_CELL_DATA\Rif1\seg'  # *.png
+csv_path = 'D:\Microscopy\SMSNEW\_ANIMAL_CELL_DATA\Rif1\pablo\im\ImagesNoMetadata\AnalysisRebindCBC_start0_Quality3n5_noConFilt' # csv from trackmate
+mask_path = 'D:\Microscopy\SMSNEW\_ANIMAL_CELL_DATA\Rif1\pablo\seg'  # *.png
 
-output_folder_name = 'SA_low'
+output_folder_name = 'SF'
 
 [toggle]
 use_gap_fixed = true # for rebind-analysis to use gap-fixed
 filter_by_binding_prop = true # filter tracks after gap-fixes
 run_visualizer = true # run visualizer after analysis
 run_MSD_calculations = true # run MSD calculations after analysis
-bacteria_analysis = false # the analysis is run on small cells, additional filter conditions apply
+bacteria_analysis = false # the analysis is run on small cells, additional filter conditions apply, one molecule per cell
 
 [track-sorting]
 allowed_gap_max = 10
 allowed_track_length_min = 6
-allowed_track_length_max = 2000
+allowed_track_length_max = 3000
 dist_range = 5
 # if bacteria_analysis = True
 allowed_overlap = 30 # allowed total repeated frames in tracks in a cell, eliminate all tracks if exceeds
 concurrent_max = 10 # max concurrent frames in *different* tracks in a cell, eliminate the frames if exceeds.
 
 [bound-classification]
-distance_threshold = 0.72             # 0.72 for 10ms +Error 2.6 for 100ms
-distance_threshold_strict = 0.28      # 0.28 for 10ms +Error 1.2 for 100ms
+distance_threshold = 1.4             # 0.72 for 10ms +Error 2.6 for 100ms
+distance_threshold_strict = 0.72      # 0.28 for 10ms +Error 1.2 for 100ms
 
 [gaps-and-fixes]
 min_time_strict = 4
@@ -46,5 +46,5 @@ max_time_constrained = 50 # after which it will be counted unsuccessful
 
 [MSD-analysis]
 time_interval_ms = 10  # Frame interval in milliseconds
-pixel_size_um = 0.130   # Pixel size in microns (e.g., 0.130 µm per pixel)
+pixel_size_um = 0.094   # Pixel size in microns (e.g., 0.130 µm per pixel)
 use_brownian_only = true # set alpha to 1, assume brownean motion

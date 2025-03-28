@@ -123,8 +123,8 @@ def main(config_path:str = None):
     time_interval = time_interval_ms / 1000.0  # Convert ms to seconds
     use_brownian_only = configs.get('MSD-analysis', {}).get('use_brownian_only', True)  # Toggle for Brownian-only fit
     # Parameters
-    frames_per_subdivision = 10  # Number of frames per subdivision
-    bin_scaling_factor = 0.75  # Scaling factor for the number of bins
+    frames_per_subdivision = 4  # Number of frames per subdivision
+    bin_scaling_factor = 0.1  # Scaling factor for the number of bins
     # Additional parameters for localization error correction
     b = 0.0  # Localization error (in microns)
     T_int = 0.01  # Integration time in seconds (e.g., 10ms)
