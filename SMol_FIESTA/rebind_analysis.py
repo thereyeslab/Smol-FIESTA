@@ -323,11 +323,11 @@ def main(config_path:str = None):
 
     print_log('Count of Constrained to Diffusion:', constrained_dest[0])
     print_log('Count of Constrained to Bound:', constrained_dest[1])
-    print_log('Probability of Constrained to Bound:', float(constrained_dest[1]) / float(constrained_dest[0] + constrained_dest[1]))
+    print_log('Probability of Constrained to Bound:', float(constrained_dest[1]) / (float(constrained_dest[0] + constrained_dest[1])))
     print_log('')
     output_result.append(
         'Constrained Diffusion Transitions (by Events),->Diffusion,' + str(constrained_dest[0]) + ',->Bound,' +
-        str(constrained_dest[1]) + ',P(->Bound),' + str(float(constrained_dest[1]) / float(constrained_dest[0] + constrained_dest[1])))
+        str(constrained_dest[1]) + ',P(->Bound),' + str(float(constrained_dest[1]) / (float(constrained_dest[0] + constrained_dest[1])+0.0000001)))
 
     output_result.append('')
 
@@ -348,7 +348,7 @@ def main(config_path:str = None):
     print_log('-> Count of Diffusion to Diffusion:', all_diffusion_dest[0])
     print_log('-> Count of Diffusion to Bound:', all_diffusion_dest[1])
     print_log('-> Probability of Diffusion to Bound:',
-              float(all_diffusion_dest[1]) / float(all_diffusion_dest[0] + all_diffusion_dest[1]))
+              float(all_diffusion_dest[1]) / (float(all_diffusion_dest[0] + all_diffusion_dest[1]))+.000000001)
     output_result.append(
         'Diffusion(All) Transitions (by Frame),->Diffusion,' + str(all_diffusion_dest[0]) + ',->Bound,' +
         str(all_diffusion_dest[1]) + ',P(->Bound),' +
@@ -361,7 +361,7 @@ def main(config_path:str = None):
     if all_diffusion_dest_strict[0] == 0 or all_diffusion_dest_strict[1] == 0:
         op2 = 0
     else:
-        op2 = float(all_diffusion_dest_strict[1]) / float(all_diffusion_dest_strict[0] + all_diffusion_dest_strict[1])
+        op2 = float(all_diffusion_dest_strict[1]) / (float(all_diffusion_dest_strict[0] + all_diffusion_dest_strict[1])+0.000000001)
 
     print_log('-> Probability of Diffusion to Bound:', op2)
     output_result.append(
@@ -457,6 +457,17 @@ def main(config_path:str = None):
     rbtime_strict_record = pd.DataFrame(rebind_strict_time_all, columns=rbtime_columns).astype(
         {'Rebinding Time': 'int'})
     rbtime_strict_record.to_csv(str(os.path.join(output_path, 'rebind-strict-rebindingtime.csv')))
+    # Transition Matrix calculation
+    transition_matrices = calculate_transition_matrices(tracks)
+
+    # Save corrected CSV output
+    transition_csv = os.path.join(output_path, 'transition_matrices_counts_and_proportions.csv')
+    transition_matrices.to_csv(transition_csv)
+
+    # Log updated matrices
+    print_log('Corrected transition matrices (frame-by-frame counts & proportions):')
+    print_log(f'\n{transition_matrices}')
+
     return
 
 '''
@@ -720,6 +731,45 @@ def csv_write(path, data):
         for line in data:
             writer.writerow(line)
         file.close()
+
+def calculate_transition_matrices(tracks):
+    states = {0: 'F.dif', 1: 'C.Dif', 2: 'Bound'}
+
+    # Absolute transition count matrix
+    abs_matrix = pd.DataFrame(
+        np.zeros((3, 3), dtype=int),
+        index=[f'From_{states[i]}' for i in range(3)],
+        columns=[f'To_{states[i]}' for i in range(3)]
+    )
+
+    # Count transitions frame-by-frame
+    for track in tracks:
+        behavior_sequence = track['Bound'].values
+        frame_numbers = track['Frame'].values
+
+        for i in range(1, len(behavior_sequence)):
+            prev_frame = frame_numbers[i-1]
+            current_frame = frame_numbers[i]
+
+            # Check consecutive frames
+            if current_frame == prev_frame + 1:
+                from_state = behavior_sequence[i-1]
+                to_state = behavior_sequence[i]
+                abs_matrix.iloc[from_state, to_state] += 1
+
+    # Calculate proportions row-wise
+    proportion_matrix = abs_matrix.div(abs_matrix.sum(axis=1), axis=0).fillna(0)
+
+    # Combine matrices side-by-side
+    combined_matrix = pd.concat(
+        [abs_matrix, proportion_matrix],
+        axis=1,
+        keys=['Absolute Counts', 'Proportions']
+    )
+
+    return combined_matrix
+
+
 
 '''
 ================================================================================================================

@@ -40,7 +40,7 @@ def determine_constrained(before:list, after:list):
     if before[0] == 1 and after[0] ==1:
         return 1
     elif before[0] == 1 or after[0] == 1:
-        return 1 if np.average(before[1:4]) > 0.5 or np.average(after[1:4]) > 0.5 else 0
+        return 1 if np.average(before[1:4]) > 0.75 or np.average(after[1:4]) > 0.75 else 0
     else: return 0
 
 # Customizable: Criteria for strictly bound.

@@ -1,11 +1,11 @@
 from setuptools import setup
 setup(
-    name='SearchAnalysis',
-    version='0.1',
+    name='SMol_FIESTA',
+    version='1.0',
     description='',
     author='Reyes-Lamothe Lab, McGill University',
     author_email='jose.rasconperez@mail.mcgill.ca',
-    packages=['SearchAnalysis'],
+    packages=['SMol_FIESTA'],
     install_requires=[
         "setuptools~=68.2.0",
         "numpy~=2.2.3",
@@ -20,6 +20,6 @@ setup(
         "imagecodecs~=2024.12.30"
     ],
     entry_points={
-        'console_scripts': ['SearchAnalysis=SearchAnalysis.BatchRun_Rebind:run_scripts']
+            'console_scripts': ['SMF=SMol_FIESTA.BatchRun_Rebind:run_scripts']
     }
 )

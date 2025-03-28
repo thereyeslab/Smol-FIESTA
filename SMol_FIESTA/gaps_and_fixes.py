@@ -147,7 +147,7 @@ def main(config_path:str = None):
         __ += _
 
         # Pass 1: FD -> CD, Merge
-        _, events2 = pass_events(events1, 0, lambda l,r: 2 if l == 2 and r == 2 else 0, min_time_diffusion)
+        _, events2 = pass_events(events1, 0, lambda l,r: 2 if l == 2 and r == 2 else 1, min_time_diffusion)
         print_log('\t-> Pass 1:', _, 'events relabeled.')
         __ += _
 

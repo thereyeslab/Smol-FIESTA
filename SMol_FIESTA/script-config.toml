@@ -1,36 +1,36 @@
 [path]
-csv_path = 'F:\DataDump\Sim_BP_FR\test\Images2\AnalysisRebind' # csv from trackmate
-mask_path = 'F:\DataDump\Sim_BP_FR\test\segmented'  # *.png
+csv_path = 'D:\Microscopy\SMSNEW\_ANIMAL_CELL_DATA\Rif1\AnalysisRebindCBC_start0_Quality2p5_All' # csv from trackmate
+mask_path = 'D:\Microscopy\SMSNEW\_ANIMAL_CELL_DATA\Rif1\seg'  # *.png
 
-output_folder_name = 'SA'
+output_folder_name = 'SA_low'
 
 [toggle]
 use_gap_fixed = true # for rebind-analysis to use gap-fixed
 filter_by_binding_prop = true # filter tracks after gap-fixes
 run_visualizer = true # run visualizer after analysis
 run_MSD_calculations = true # run MSD calculations after analysis
-bacteria_analysis = true # the analysis is run on small cells, additional filter conditions apply
+bacteria_analysis = false # the analysis is run on small cells, additional filter conditions apply
 
 [track-sorting]
 allowed_gap_max = 10
-allowed_track_length_min = 60
-allowed_track_length_max = 20000
+allowed_track_length_min = 6
+allowed_track_length_max = 2000
 dist_range = 5
 # if bacteria_analysis = True
 allowed_overlap = 30 # allowed total repeated frames in tracks in a cell, eliminate all tracks if exceeds
 concurrent_max = 10 # max concurrent frames in *different* tracks in a cell, eliminate the frames if exceeds.
 
 [bound-classification]
-distance_threshold = 2.6
-distance_threshold_strict = 1.2
+distance_threshold = 0.72             # 0.72 for 10ms +Error 2.6 for 100ms
+distance_threshold_strict = 0.28      # 0.28 for 10ms +Error 1.2 for 100ms
 
 [gaps-and-fixes]
 min_time_strict = 4
-min_time_constrained = 3
-min_time_diffusion = 3
+min_time_constrained = 4
+min_time_diffusion = 6
 max_bound_gapFill = 4
-min_prop_binding = 0.08 # for both constricted and strict, filter condition after gap-fixes
-max_prop_binding = 0.99 # filter also for all-bound tracks, most-likely dirt
+min_prop_binding = 0.00 # for both constricted and strict, filter condition after gap-fixes
+max_prop_binding = 1.01 # filter also for all-bound tracks, most-likely dirt
 
 [rebind-analysis]
 rebind_distance_same = 1.0 # Determines rebinds to same particles < parameter
@@ -43,3 +43,8 @@ min_time_diffusion = 0
 min_time_diffusion_subsequent = 1 # minimum time required for subsequent event after diffusion
 max_time_rebinding = 50 # after which it will be counted unsuccessful
 max_time_constrained = 50 # after which it will be counted unsuccessful
+
+[MSD-analysis]
+time_interval_ms = 10  # Frame interval in milliseconds
+pixel_size_um = 0.130   # Pixel size in microns (e.g., 0.130 µm per pixel)
+use_brownian_only = true # set alpha to 1, assume brownean motion
