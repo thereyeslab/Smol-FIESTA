@@ -1,8 +1,8 @@
 [path]
-csv_path = 'D:\Microscopy\SMSNEW\_ANIMAL_CELL_DATA\Rif1\pablo\im\ImagesNoMetadata\AnalysisRebindCBC_start0_Quality3n5_noConFilt' # csv from trackmate
-mask_path = 'D:\Microscopy\SMSNEW\_ANIMAL_CELL_DATA\Rif1\pablo\seg'  # *.png
+csv_path = 'D:\Microscopy\SMSNEW\_Yeast_Data_\im\ImagesNoMetadata\AnalysisSMolFiesta' # csv from trackmate
+mask_path = 'D:\Microscopy\SMSNEW\_Yeast_Data_\seg'  # *.png
 
-output_folder_name = 'SF'
+output_folder_name = 'SF_diferentClass4'
 
 [toggle]
 use_gap_fixed = true # for rebind-analysis to use gap-fixed
@@ -12,22 +12,22 @@ run_MSD_calculations = true # run MSD calculations after analysis
 bacteria_analysis = false # the analysis is run on small cells, additional filter conditions apply, one molecule per cell
 
 [track-sorting]
-allowed_gap_max = 10
+allowed_gap_max = 4
 allowed_track_length_min = 6
-allowed_track_length_max = 3000
+allowed_track_length_max = 2000
 dist_range = 5
 # if bacteria_analysis = True
 allowed_overlap = 30 # allowed total repeated frames in tracks in a cell, eliminate all tracks if exceeds
 concurrent_max = 10 # max concurrent frames in *different* tracks in a cell, eliminate the frames if exceeds.
 
 [bound-classification]
-distance_threshold = 1.4             # 0.72 for 10ms +Error 2.6 for 100ms
-distance_threshold_strict = 0.72      # 0.28 for 10ms +Error 1.2 for 100ms
+distance_threshold = 2.0            # 0.72 for 10ms +Error 2.6 for 100ms
+distance_threshold_strict = 1.5     # 0.28 for 10ms +Error 1.2 for 100ms
 
 [gaps-and-fixes]
-min_time_strict = 4
+min_time_strict = 0
 min_time_constrained = 4
-min_time_diffusion = 6
+min_time_diffusion = 0
 max_bound_gapFill = 4
 min_prop_binding = 0.00 # for both constricted and strict, filter condition after gap-fixes
 max_prop_binding = 1.01 # filter also for all-bound tracks, most-likely dirt

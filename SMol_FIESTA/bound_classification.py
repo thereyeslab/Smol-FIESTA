@@ -56,6 +56,8 @@ def determine_bound(before:list, after:list):
         1.0 if np.average(np.concatenate([before[0:2], after[0:2]])) == 1.0 else 0.0,
         1.0 if np.average(np.concatenate([before[0:1], after[0:3]])) == 1.0 else 0.0,
         1.0 if np.average(np.concatenate([before[0:3], after[0:1]])) == 1.0 else 0.0,
+        1.0 if np.average(before[1:4]) == 1.0 else 0.0,
+        1.0 if np.average(after[1:4]) == 1.0 else 0.0,
     ])
     return 1 if decision >= 1 else 0
 

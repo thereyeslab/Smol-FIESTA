@@ -36,8 +36,11 @@ def calculate_MSD(df):
     N = len(df)
     msd = []
     for n in range(1, N):
-        displacements = [(df['x_coor_um'].iloc[i + n] - df['x_coor_um'].iloc[i]) ** 2 +
-                         (df['y_coor_um'].iloc[i + n] - df['y_coor_um'].iloc[i]) ** 2 for i in range(N - n)]
+        displacements = [
+            (df['x_coor_um'].iloc[i + n] - df['x_coor_um'].iloc[i]) ** 2 +
+            (df['y_coor_um'].iloc[i + n] - df['y_coor_um'].iloc[i]) ** 2
+            for i in range(N - n)
+        ]
         msd.append(np.mean(displacements))
     return msd
 
@@ -52,7 +55,6 @@ def fit_MSD(msd, frame_interval, b, T_int, T_exp):
     popt, _ = curve_fit(msd_func, times, msd, bounds=(0, [np.inf, 2]))
     return popt  # returns [D, alpha]
 
-# New function for Brownian motion only (alpha fixed to 1)
 def fit_MSD_brownian(msd, frame_interval, b, T_int, T_exp):
     """
     MSD fitting function assuming purely Brownian motion (alpha = 1).
@@ -75,32 +77,28 @@ def filter_outliers(data):
 def plot_gaussian_fit(data, color, label, ax, bins):
     sns.histplot(data, kde=False, color=color, bins=bins, element='bars', stat='probability', ax=ax)
     ax.set_xscale('log')
-    ax.set_xlim(0.0001, 50)  # Set limits from 0.0001 to 50 on the log scale
+    ax.set_xlim(0.0001, 50)
     ax.set_xticks([0.0001, 0.001, 0.01, 0.1, 1, 10])
     ax.set_xticklabels(['0.0001', '0.001', '0.01', '0.1', '1', '10'])
-    ax.set_ylim([0, .15])
-    # Convert y-axis to percentage
+    # We do not force a fixed ylim here; it will be adjusted later
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{y * 100:.0f}%'))
-    # Fit Gaussian
     if len(data) > 0:
         log_data = np.log10(data)
-        log_data = filter_outliers(log_data)  # Filter outliers
+        log_data = filter_outliers(log_data)
         mean, std = norm.fit(log_data)
         xmin, xmax = ax.get_xlim()
         x = np.linspace(np.log10(xmin), np.log10(xmax), 100)
         p = norm.pdf(x, mean, std)
-        # Calculate the height of the peak bin
         hist, bin_edges = np.histogram(data, bins=bins, density=False)
         peak_bin_index = np.argmax(hist)
         peak_x = (bin_edges[peak_bin_index] + bin_edges[peak_bin_index + 1]) / 2
-        peak_y = hist[peak_bin_index] / len(data)  # Normalize to the total count
-        # Find the Gaussian value at peak_x
+        peak_y = hist[peak_bin_index] / len(data)
         peak_gaussian_y = norm.pdf(np.log10(peak_x), mean, std)
-        # Scale factor to match the histogram's peak y value
         scale_factor = peak_y / peak_gaussian_y
-        optimized_scale_factor, _ = curve_fit(lambda x, scale: norm.pdf(x, mean, std) * scale,
-                                              np.log10(bins[:-1] + np.diff(bins) / 2), hist / len(data),
-                                              p0=[scale_factor])
+        optimized_scale_factor, _ = curve_fit(
+            lambda x, scale: norm.pdf(x, mean, std) * scale,
+            np.log10(bins[:-1] + np.diff(bins) / 2), hist / len(data), p0=[scale_factor]
+        )
         ax.plot(10 ** x, p * optimized_scale_factor[0], 'k', linewidth=2)
         ax.legend([f'{label} (peak D={10 ** mean:.6f} µm²/s)'])
         return mean, std, optimized_scale_factor[0]
@@ -108,37 +106,39 @@ def plot_gaussian_fit(data, color, label, ax, bins):
         ax.legend([f'{label} (no data available)'])
         return None, None, None
 
-def main(config_path:str = None):
+def main(config_path: str = None):
     if not config_path:
         __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
         config_path = os.path.join(__location__, 'script-config.toml')
     with open(config_path, 'rb') as config_file:
         configs = tomllib.load(config_file)
-    # Load the CSV file
+
+    # Load the CSV file and configuration parameters
     csv_path = configs['path']['csv_path']
     output_dir = os.path.join(csv_path, configs['path']['output_folder_name'])
-    # Load configurable parameters from config
-    pixel_to_micron = configs.get('MSD-analysis', {}).get('pixel_size_um', 0.130)  # Configurable pixel size (µm)
-    time_interval_ms = configs.get('MSD-analysis', {}).get('time_interval_ms', 100)  # Configurable time interval (ms)
-    time_interval = time_interval_ms / 1000.0  # Convert ms to seconds
-    use_brownian_only = configs.get('MSD-analysis', {}).get('use_brownian_only', True)  # Toggle for Brownian-only fit
-    # Parameters
+    pixel_to_micron = configs.get('MSD-analysis', {}).get('pixel_size_um', 0.130)
+    time_interval_ms = configs.get('MSD-analysis', {}).get('time_interval_ms', 100)
+    time_interval = time_interval_ms / 1000.0
+    use_brownian_only = configs.get('MSD-analysis', {}).get('use_brownian_only', True)
+
     frames_per_subdivision = 4  # Number of frames per subdivision
-    bin_scaling_factor = 0.1  # Scaling factor for the number of bins
-    # Additional parameters for localization error correction
+    bin_scaling_factor = 0.75
     b = 0.0  # Localization error (in microns)
-    T_int = 0.01  # Integration time in seconds (e.g., 10ms)
-    T_exp = 0.01  # Exposure time in seconds (e.g., 10ms)
-    cutoff_bound = 0.02  # Diffusion coefficient cutoff for bound
-    cutoff_cdiffusion = 2.5  # Diffusion coefficient cutoff for constrained diffusion
-    cutoff_fdiffusion = 5  # Diffusion coefficient cutoff for fast diffusion
-    min_bound = 0.0001  # Minimum threshold for bound
-    min_cdiffusion = 0.001  # Minimum threshold for constrained diffusion
-    min_fdiffusion = 0.001  # Minimum threshold for fast diffusion
-    # Toggle for including Gaussian fits in the combined plot
+    T_int = 0.01  # Integration time in seconds
+    T_exp = 0.01  # Exposure time in seconds
+    cutoff_bound = 0.02
+    cutoff_cdiffusion = 2.5
+    cutoff_fdiffusion = 5
+    min_bound = 0.0001
+    min_cdiffusion = 0.001
+    min_fdiffusion = 0.001
     include_gaussian_fits = False
-    # Specify the input file path based on toggle use_gap_fixed
-    data = pd.read_csv(os.path.join(output_dir, ('gaps-and-fixes_decisions.csv' if configs['toggle']['use_gap_fixed'] else 'bound_decisions.csv')))
+
+    # Select the input file based on the toggle use_gap_fixed
+    input_file = 'gaps-and-fixes_decisions.csv' if configs['toggle']['use_gap_fixed'] else 'bound_decisions.csv'
+    data = pd.read_csv(os.path.join(output_dir, input_file))
+
+    # Calculate basic bound counts for proportions (using original counts from CSV)
     bound_counts = data['Bound'].value_counts()
     counts_0 = bound_counts.get(0, 0)
     counts_1 = bound_counts.get(1, 0)
@@ -146,7 +146,8 @@ def main(config_path:str = None):
     percentage_0 = (counts_0 / (counts_0 + counts_1 + counts_2)) * 100
     percentage_1 = (counts_1 / (counts_0 + counts_1 + counts_2)) * 100
     percentage_2 = (counts_2 / (counts_0 + counts_1 + counts_2)) * 100
-    # First pass: separate events based on "Bound"
+
+    # First pass: Separate events based on "Bound"
     events = []
     for video in data['Video #'].unique():
         video_data = data[data['Video #'] == video]
@@ -158,7 +159,7 @@ def main(config_path:str = None):
                 subdivs = [track_data.iloc[i:i + frames_per_subdivision] for i in range(0, track_length, frames_per_subdivision)]
                 for sub_id, sub in enumerate(subdivs):
                     if len(sub) < frames_per_subdivision:
-                        continue  # Skip segments smaller than the specified number of frames
+                        continue  # Skip incomplete subdivisions
                     initial_frame = None
                     last_frame = None
                     current_bound = sub.iloc[0]['Bound']
@@ -187,13 +188,15 @@ def main(config_path:str = None):
                                 current_bound = sub.iloc[i + 1]['Bound']
                                 event_number += 1
                                 initial_frame = sub.iloc[i + 1]['Frame']
-    # Second pass: calculate distances and MSDs
+
+    # Second pass: Calculate MSDs and counts for each event
     final_results_with_correct_frames = []
     for event in events:
         positions = event["Positions"]
         df = pd.DataFrame(positions, columns=['x_coor', 'y_coor'])
         df['x_coor_um'] = df['x_coor'] * pixel_to_micron
         df['y_coor_um'] = df['y_coor'] * pixel_to_micron
+
         if len(df) >= 4:
             msd = calculate_MSD(df)
             if use_brownian_only:
@@ -202,7 +205,11 @@ def main(config_path:str = None):
                 D, alpha = fit_MSD(msd, time_interval, b, T_int, T_exp)
         else:
             D, alpha = np.nan, np.nan
-        frame_count = event["Last Frame"] - event["Initial Frame"] + 1  # Include gaps in the total count
+
+        # Compute counts:
+        raw_count = event["Last Frame"] - event["Initial Frame"] + 1  # Raw count based on frame range
+        valid_count = len(positions)  # Valid count based on recorded positions
+
         final_results_with_correct_frames.append({
             "Video #": event["Video #"],
             "Video Name": event["Video Name"],
@@ -211,16 +218,21 @@ def main(config_path:str = None):
             "Event": event["Event"],
             "Diffusion Coefficient": D,
             "Alpha": alpha,
-            "Count": frame_count,
+            "Raw_Count": raw_count,
+            "Valid_Count": valid_count,
             "Bound": event["Bound"],
             "Initial Frame": event["Initial Frame"],
             "Last Frame": event["Last Frame"]
         })
+
     final_results_with_correct_frames_df = pd.DataFrame(final_results_with_correct_frames)
     sorted_final_results_with_correct_frames_df = final_results_with_correct_frames_df.sort_values(
-        by=["Video #", "Cell", "Track", "Event"])
+        by=["Video #", "Cell", "Track", "Event"]
+    )
     output_csv_path = os.path.join(output_dir, 'Diffusion_Coefficient_Calculation.csv')
     sorted_final_results_with_correct_frames_df.to_csv(output_csv_path, index=False)
+
+    # Prepare data for plotting
     data = pd.read_csv(output_csv_path)
     data.replace([np.inf, -np.inf], np.nan, inplace=True)
     data.dropna(subset=['Diffusion Coefficient'], inplace=True)
@@ -232,90 +244,94 @@ def main(config_path:str = None):
     filtered_bound_0_plot = filtered_data_plot[filtered_data_plot['Bound'] == 0]
     filtered_bound_1_plot = filtered_data_plot[filtered_data_plot['Bound'] == 1]
     filtered_bound_2_plot = filtered_data_plot[filtered_data_plot['Bound'] == 2]
-    filtered_bound_0 = data[(data['Bound'] == 0) & (data['Diffusion Coefficient'] >= min_fdiffusion)]
-    filtered_bound_1 = data[(data['Bound'] == 1) & (data['Diffusion Coefficient'] >= min_cdiffusion)]
-    filtered_bound_2 = data[(data['Bound'] == 2) & (data['Diffusion Coefficient'] >= min_bound)]
-    total_entries = data['Count'].sum()
-    count_0 = filtered_bound_0['Count'].sum()
-    count_1 = filtered_bound_1['Count'].sum()
-    count_2 = filtered_bound_2['Count'].sum()
-    percentage_0_filt = (count_0 / total_entries) * 100
-    percentage_1_filt = (count_1 / total_entries) * 100
-    percentage_2_filt = (count_2 / total_entries) * 100
-    filtered_bound_0_plot = filtered_bound_0_plot[filtered_bound_0_plot['Count'] >= 4]
-    filtered_bound_1_plot = filtered_bound_1_plot[filtered_bound_1_plot['Count'] >= 4]
-    filtered_bound_2_plot = filtered_bound_2_plot[filtered_bound_2_plot['Count'] >= 4]
+
+    # Use valid counts for weighting and filtering
+    filtered_bound_0_plot = filtered_bound_0_plot[filtered_bound_0_plot['Valid_Count'] >= 3]
+    filtered_bound_1_plot = filtered_bound_1_plot[filtered_bound_1_plot['Valid_Count'] >= 3]
+    filtered_bound_2_plot = filtered_bound_2_plot[filtered_bound_2_plot['Valid_Count'] >= 3]
+
     replicated_data = []
     replicated_bounds = []
     for _, row in filtered_bound_0_plot.iterrows():
-        replicated_data.extend([row['Diffusion Coefficient']] * int(row['Count']))
-        replicated_bounds.extend([0] * int(row['Count']))
+        replicated_data.extend([row['Diffusion Coefficient']] * int(row['Valid_Count']))
+        replicated_bounds.extend([0] * int(row['Valid_Count']))
     for _, row in filtered_bound_1_plot.iterrows():
-        replicated_data.extend([row['Diffusion Coefficient']] * int(row['Count']))
-        replicated_bounds.extend([1] * int(row['Count']))
+        replicated_data.extend([row['Diffusion Coefficient']] * int(row['Valid_Count']))
+        replicated_bounds.extend([1] * int(row['Valid_Count']))
     for _, row in filtered_bound_2_plot.iterrows():
-        replicated_data.extend([row['Diffusion Coefficient']] * int(row['Count']))
-        replicated_bounds.extend([2] * int(row['Count']))
+        replicated_data.extend([row['Diffusion Coefficient']] * int(row['Valid_Count']))
+        replicated_bounds.extend([2] * int(row['Valid_Count']))
+
     plot_data = pd.DataFrame({
         'Diffusion Coefficient': replicated_data,
         'Bound': replicated_bounds
     })
-    base_num_bins = 60  # Base number of bins for the scaling factor of 1
+
+    base_num_bins = 60
     num_bins = int(base_num_bins * bin_scaling_factor)
-    bins = np.logspace(np.log10(0.0001), np.log10(10), num=num_bins)  # Adjust bins based on scaling factor
+    bins = np.logspace(np.log10(0.0001), np.log10(10), num=num_bins)
+
     pdf_output_path = os.path.join(output_dir, 'Diffusion_Coefficient_Plots.pdf')
     with PdfPages(pdf_output_path) as pdf:
-        # Create individual histograms for each Bound with Gaussian fit
-        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        # Create individual subplots for each behavior with shared y-axis
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
         mean_bound, std_bound, scale_bound = plot_gaussian_fit(
             plot_data[plot_data['Bound'] == 2]['Diffusion Coefficient'],
             '#66cc33', 'Bound', axes[0], bins)
         mean_cdiffusion, std_cdiffusion, scale_cdiffusion = plot_gaussian_fit(
-            plot_data[plot_data['Bound'] == 1]['Diffusion Coefficient'], '#3366cc', 'C.Diffusion', axes[1], bins)
+            plot_data[plot_data['Bound'] == 1]['Diffusion Coefficient'],
+            '#3366cc', 'C.Diffusion', axes[1], bins)
         mean_fdiffusion, std_fdiffusion, scale_fdiffusion = plot_gaussian_fit(
-            plot_data[plot_data['Bound'] == 0]['Diffusion Coefficient'], '#cc3366', 'F.Diffusion', axes[2], bins)
+            plot_data[plot_data['Bound'] == 0]['Diffusion Coefficient'],
+            '#cc3366', 'F.Diffusion', axes[2], bins)
+        # Determine the maximum y-limit across all three subplots
+        ymax = max(ax.get_ylim()[1] for ax in axes)
+        for ax in axes:
+            ax.set_ylim(0, ymax)
         plt.tight_layout()
-        pdf.savefig()  # Save the current figure into the PDF
+        pdf.savefig()
         plt.close()
-        # Create combined histogram with all Gaussian fits
+
+        # Create the combined histogram for all behaviors
         plt.figure(figsize=(15, 5))
-        plt.hist(plot_data[plot_data['Bound'] == 0]['Diffusion Coefficient'], bins=bins, color='#cc3366', alpha=0.75,
-                 label=f'Fast Diffusion ({percentage_0_filt:.2f}%)', weights=np.full(len(plot_data[plot_data['Bound'] == 0]),
-                                                                                percentage_0_filt / 100 / len(
-                                                                                    plot_data[plot_data['Bound'] == 0])))
-        plt.hist(plot_data[plot_data['Bound'] == 1]['Diffusion Coefficient'], bins=bins, color='#3366cc', alpha=0.75,
-                 label=f'Constrained Diffusion ({percentage_1_filt:.2f}%)',
-                 weights=np.full(len(plot_data[plot_data['Bound'] == 1]),
-                                 percentage_1_filt / 100 / len(plot_data[plot_data['Bound'] == 1])))
-        plt.hist(plot_data[plot_data['Bound'] == 2]['Diffusion Coefficient'], bins=bins, color='#66cc33', alpha=0.75,
-                 label=f'Bound ({percentage_2_filt:.2f}%)', weights=np.full(len(plot_data[plot_data['Bound'] == 2]),
-                                                                       percentage_2_filt / 100 / len(
-                                                                           plot_data[plot_data['Bound'] == 2])))
+        # Store the histogram counts for each class so we can compute the maximum
+        counts0, _, _ = plt.hist(plot_data[plot_data['Bound'] == 0]['Diffusion Coefficient'], bins=bins, color='#cc3366', alpha=0.75,
+                                 label=f'Fast Diffusion ({percentage_0:.2f}%)', weights=np.full(len(plot_data[plot_data['Bound'] == 0]),
+                                                                                                percentage_0 / 100 / len(plot_data[plot_data['Bound'] == 0])))
+        counts1, _, _ = plt.hist(plot_data[plot_data['Bound'] == 1]['Diffusion Coefficient'], bins=bins, color='#3366cc', alpha=0.75,
+                                 label=f'Constrained Diffusion ({percentage_1:.2f}%)', weights=np.full(len(plot_data[plot_data['Bound'] == 1]),
+                                                                                                     percentage_1 / 100 / len(plot_data[plot_data['Bound'] == 1])))
+        counts2, _, _ = plt.hist(plot_data[plot_data['Bound'] == 2]['Diffusion Coefficient'], bins=bins, color='#66cc33', alpha=0.75,
+                                 label=f'Bound ({percentage_2:.2f}%)', weights=np.full(len(plot_data[plot_data['Bound'] == 2]),
+                                                                                    percentage_2 / 100 / len(plot_data[plot_data['Bound'] == 2])))
+        # Calculate the maximum y value from the histograms and set the y-limit to 110% of that maximum
+        max_y_combined = max(np.max(counts0), np.max(counts1), np.max(counts2))
         plt.xscale('log')
-        plt.xlim(0.0001, 50)  # Set limits from 0.0001 to 50 on the log scale
-        plt.xticks([0.0001, 0.001, 0.01, 0.1, 1, 10], ['0.0001', '0.001', '0.01', '0.1', '1', '10'])  # Custom ticks
-        plt.ylim(0, 0.07)
+        plt.xlim(0.0001, 50)
+        plt.xticks([0.0001, 0.001, 0.01, 0.1, 1, 10], ['0.0001', '0.001', '0.01', '0.1', '1', '10'])
+        plt.ylim(0, max_y_combined * 1.1)
         if include_gaussian_fits:
             x = np.linspace(np.log10(0.0001), np.log10(50), 100)
             if mean_bound is not None and std_bound is not None:
                 p_bound = norm.pdf(x, mean_bound, std_bound)
-                plt.plot(10 ** x, p_bound * scale_bound * (percentage_2_filt / 100), 'k', linewidth=2,
+                plt.plot(10 ** x, p_bound * scale_bound * (percentage_2 / 100), 'k', linewidth=2,
                          label='Bound Gaussian Fit')
             if mean_cdiffusion is not None and std_cdiffusion is not None:
                 p_cdiffusion = norm.pdf(x, mean_cdiffusion, std_cdiffusion)
-                plt.plot(10 ** x, p_cdiffusion * scale_cdiffusion * (percentage_1_filt / 100), 'k', linewidth=2,
+                plt.plot(10 ** x, p_cdiffusion * scale_cdiffusion * (percentage_1 / 100), 'k', linewidth=2,
                          label='C.Diffusion Gaussian Fit')
             if mean_fdiffusion is not None and std_fdiffusion is not None:
                 p_fdiffusion = norm.pdf(x, mean_fdiffusion, std_fdiffusion)
-                plt.plot(10 ** x, p_fdiffusion * scale_fdiffusion * (percentage_0_filt / 100), 'k', linewidth=2,
+                plt.plot(10 ** x, p_fdiffusion * scale_fdiffusion * (percentage_0 / 100), 'k', linewidth=2,
                          label='F.Diffusion Gaussian Fit')
         plt.title('Distribution of Apparent Diffusion Coefficient for All Behaviours with Gaussian Fits')
         plt.xlabel('Diffusion Coefficient (µm²/s)')
         plt.ylabel('Frequency')
         plt.legend(loc='upper left', bbox_to_anchor=(0, 1))
         plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{y * 100:.0f}%'))
-        pdf.savefig()  # Save the current figure into the PDF
+        pdf.savefig()
         plt.close()
+
     print("Plots saved to PDF:", pdf_output_path)
     print("Results saved to CSV:", output_csv_path)
     return
@@ -328,6 +344,6 @@ if __name__ == '__main__':
         epilog='Prior scripts: bound_classification.py, gaps_and_fixes.py')
     parser.add_argument('-c', '--config', default=None, type=str)
     args = parser.parse_args()
-    print('Running as __main__ \\n\\t-> config_path: ' + str(args.config))
+    print('Running as __main__ \n\t-> config_path: ' + str(args.config))
     main(args.config)
     print("--- %s seconds ---" % (time.time() - start_time))
