@@ -21,7 +21,7 @@ allowed_overlap = 30 # allowed total repeated frames in tracks in a cell, elimin
 concurrent_max = 10 # max concurrent frames in *different* tracks in a cell, eliminate the frames if exceeds.
 
 [bound-classification]
-distance_threshold = 2.0            # 0.72 for 10ms +Error 2.6 for 100ms
+distance_threshold = 3.0           # 0.72 for 10ms +Error 2.6 for 100ms
 distance_threshold_strict = 1.5     # 0.28 for 10ms +Error 1.2 for 100ms
 
 [gaps-and-fixes]

@@ -142,7 +142,7 @@ def main(config_path:str = None):
 
         __ = 0
         # Pass 3: CD -> FD, Merge
-        _, events1 = pass_events(events, 1, lambda l,r: 2 if l == 2 and r == 2 else 0, min_time_constrained)
+        _, events1 = pass_events(events, 1, lambda l,r: 2 if l == 2 and r == 2 else 1, min_time_constrained)
         print_log('\t-> Pass 3:', _, 'events relabeled.')
         __ += _
 
