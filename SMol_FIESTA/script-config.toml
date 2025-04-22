@@ -1,8 +1,8 @@
 [path]
-csv_path = 'D:\Microscopy\SMSNEW\_Yeast_Data_\im\ImagesNoMetadata\AnalysisSMolFiesta' # csv from trackmate
-mask_path = 'D:\Microscopy\SMSNEW\_Yeast_Data_\seg'  # *.png
+csv_path = 'D:\Microscopy\SMSNEW\_Yeast_Data_\MRC1\im\ImagesNoMetadata\AnalysisSMolFiesta' # csv from trackmate
+mask_path = 'D:\Microscopy\SMSNEW\_Yeast_Data_\MRC1\seg'  # *.png
 
-output_folder_name = 'SF_diferentClass4'
+output_folder_name = 'SF2'
 
 [toggle]
 use_gap_fixed = true # for rebind-analysis to use gap-fixed
@@ -21,8 +21,8 @@ allowed_overlap = 30 # allowed total repeated frames in tracks in a cell, elimin
 concurrent_max = 10 # max concurrent frames in *different* tracks in a cell, eliminate the frames if exceeds.
 
 [bound-classification]
-distance_threshold = 3.0           # 0.72 for 10ms +Error 2.6 for 100ms
-distance_threshold_strict = 1.5     # 0.28 for 10ms +Error 1.2 for 100ms
+distance_threshold = 2.0           # 0.72 for 10ms +Error 2.6 for 100ms   1.5 for tianzi
+distance_threshold_strict = 1.2    # 0.28 for 10ms +Error 1.2 for 100ms   0.72 for tianzi
 
 [gaps-and-fixes]
 min_time_strict = 0
