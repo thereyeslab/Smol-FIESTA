@@ -6,7 +6,7 @@
       <excludeFolder url="file://$MODULE_DIR$/dist" />
       <excludeFolder url="file://$MODULE_DIR$/SearchAnalysis.egg-info" />
     </content>
-    <orderEntry type="jdk" jdkName="SMol_FIESTA" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.11 (SearchAnalysis)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PackageRequirementsSettings">

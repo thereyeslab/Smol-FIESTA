@@ -1,7 +1,7 @@
 [path]
-csv_path = 'D:\Microscopy\SMSNEW\_Yeast_Data_\MRC1\im\ImagesNoMetadata\AnalysisSMolFiesta' # csv from trackmate
-mask_path = 'D:\Microscopy\SMSNEW\_Yeast_Data_\MRC1\seg'  # *.png
-
+csv_path = 'F:\DataDump\Sim_BP_FR\test\Images2\AnalysisRebind\SA' # csv from trackmate
+mask_path = 'F:\DataDump\Sim_BP_FR\test\segmented'  # *.png
+comdet_path = '' # optional: *.tif_Results, use exclusively by rebind-fixed-particle
 output_folder_name = 'SF2'
 
 [toggle]
@@ -9,6 +9,7 @@ use_gap_fixed = true # for rebind-analysis to use gap-fixed
 filter_by_binding_prop = true # filter tracks after gap-fixes
 run_visualizer = true # run visualizer after analysis
 run_MSD_calculations = true # run MSD calculations after analysis
+run_fixed_particle = true # run rebind_fixed_particle after analysis
 bacteria_analysis = false # the analysis is run on small cells, additional filter conditions apply, one molecule per cell
 
 [track-sorting]
@@ -48,3 +49,6 @@ max_time_constrained = 50 # after which it will be counted unsuccessful
 time_interval_ms = 10  # Frame interval in milliseconds
 pixel_size_um = 0.094   # Pixel size in microns (e.g., 0.130 µm per pixel)
 use_brownian_only = true # set alpha to 1, assume brownean motion
+
+[rebind-fixed-particle]
+allowed_spot_overlap = 0.10 # percentage area overlap allowed for particle spots in the same cell

@@ -184,7 +184,7 @@ def main(config_path: str = None):
     csv_path = configs['path']['csv_path']
     mask_path = configs['path']['mask_path']
     output_folder_name = configs['path']['output_folder_name']
-    outpath = os.path.join(csv_path, output_folder_name)
+    outpath = os.path.join(csv_path, output_folder_name, 'visualizer')
 
     use_gap_fixes = configs['toggle']['use_gap_fixed']
     max_frame = configs['track-sorting']['allowed_track_length_max']

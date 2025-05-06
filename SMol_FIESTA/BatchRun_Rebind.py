@@ -14,6 +14,7 @@ import numpy as np
 from skimage import io as imgio
 
 # Run all scripts in module on a provided config
+# TODO: Modify command-centric workflow with new scripts
 def run_scripts():
     parser = argparse.ArgumentParser(
         prog='BatchRun_Rebind',
