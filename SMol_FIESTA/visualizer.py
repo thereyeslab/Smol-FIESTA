@@ -184,7 +184,9 @@ def main(config_path: str = None):
     csv_path = configs['path']['csv_path']
     mask_path = configs['path']['mask_path']
     output_folder_name = configs['path']['output_folder_name']
-    outpath = os.path.join(csv_path, output_folder_name, 'visualizer')
+    data_dir = os.path.join(csv_path, output_folder_name)
+    outpath = os.path.join(data_dir, 'Visualizer')
+    os.makedirs(outpath, exist_ok=True)
 
     use_gap_fixes = configs['toggle']['use_gap_fixed']
     max_frame = configs['track-sorting']['allowed_track_length_max']
@@ -198,11 +200,11 @@ def main(config_path: str = None):
         'Gap': [  0,   0,   0],
     }
 
+
     masks = natsorted(get_file_names_with_ext(mask_path, 'png'))
     outlines = natsorted(get_file_names_with_ext(mask_path, 'txt'))
     input_file = 'gaps-and-fixes_decisions.csv' if use_gap_fixes else 'bound_decisions.csv'
-    tracks_df = pd.read_csv(os.path.join(outpath, input_file))
-    tracks_df = tracks_df.loc[:, ~tracks_df.columns.str.contains('^Unnamed')]
+    tracks_df = pd.read_csv(os.path.join(data_dir, input_file))
 
     headers = tracks_df[['Video #', 'Cell', 'Track']].to_numpy()
     sliced = slice_tracks(tracks_df, headers)
@@ -240,9 +242,9 @@ def main(config_path: str = None):
         # video = crop_video_to_spot_bbox(...)
 
         video = np.swapaxes(video, 1, 2).astype('uint8')
-
         out_name = os.path.splitext(os.path.basename(mask_file))[0] + '.tif'
         save_path = os.path.join(outpath, out_name)
+
         print(f'\t-> Saved to: {save_path}')
         tifffile.imwrite(
             save_path,
