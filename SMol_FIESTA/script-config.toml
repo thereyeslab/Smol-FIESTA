@@ -48,7 +48,11 @@ max_time_constrained = 50 # after which it will be counted unsuccessful
 [MSD-analysis]
 time_interval_ms = 10  # Frame interval in milliseconds
 pixel_size_um = 0.094   # Pixel size in microns (e.g., 0.130 µm per pixel)
-use_brownian_only = true # set alpha to 1, assume brownean motion
+use_brownian_only = true # set alpha to 1, assume brownian motion
+
+[visualizer]
+tail_effect_enabled =  true
+spot_diameter = 6
 
 [rebind-fixed-particle]
 allowed_spot_overlap = 0.10 # percentage area overlap allowed for particle spots in the same cell

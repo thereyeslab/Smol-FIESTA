@@ -323,11 +323,11 @@ def main(config_path:str = None):
 
     print_log('Count of Constrained to Diffusion:', constrained_dest[0])
     print_log('Count of Constrained to Bound:', constrained_dest[1])
-    print_log('Probability of Constrained to Bound:', float(constrained_dest[1]) / (float(constrained_dest[0] + constrained_dest[1])))
+    print_log('Probability of Constrained to Bound:', 0.000001+float(constrained_dest[1]) / 0.000001+(float(constrained_dest[0] + constrained_dest[1])))
     print_log('')
     output_result.append(
         'Constrained Diffusion Transitions (by Events),->Diffusion,' + str(constrained_dest[0]) + ',->Bound,' +
-        str(constrained_dest[1]) + ',P(->Bound),' + str(float(constrained_dest[1]) / (float(constrained_dest[0] + constrained_dest[1])+0.0000001)))
+        str(constrained_dest[1]) + ',P(->Bound),' + str(0.0000001+(float(constrained_dest[1]))/0.000001 +(float(constrained_dest[0] + constrained_dest[1])+0.0000001)))
 
     output_result.append('')
 
