@@ -9,6 +9,10 @@ Input:
     {comdet_path}/*_Results.csv (from comdet)
     {csv_path}/{output_folder_name}/rebind-strict-event.csv
     {mask_path}/*.png
+    Either of:
+        {csv_path}/{output_folder_name}/gaps-and-fixes_decisions.csv
+        {csv_path}/{output_folder_name}/bound_decisions.csv
+    Determined by parameter: {use_gap_fixed}
 
 Output:
     TODO: annotate when done
@@ -16,6 +20,9 @@ Output:
 Parameters:
     TODO: annotate when done
     allowed_spot_overlap: percentage area overlap allowed for particle spots in the same cell, skips cell if exceeds.
+
+    conditional:
+        use_gap_fixed: Use tracks processed by gaps_and_fixes.py, if False use tracks only processed by bound_classification.py instead.
 """
 
 import numpy as np
@@ -50,6 +57,8 @@ def main(config_path: str = None):
 
     # additional configs and parameters
     allowed_spot_overlap = configs['rebind-fixed-particle'].get('allowed_spot_overlap', 'None')
+    use_gap_fixed = configs['toggle']['use_gap_fixed']
+
 
     # set default parameter when not specified
     if isinstance(allowed_spot_overlap, str): allowed_spot_overlap = 0.0
@@ -57,8 +66,15 @@ def main(config_path: str = None):
     # file lists
     comdet_files = natsorted(get_file_names_with_ext(comdet_path, '.csv'))
     mask_files = natsorted(get_file_names_with_ext(mask_path, '.png'))
+
     rebind_df = pd.read_csv(str(os.path.join(output_path, 'rebind-strict-event.csv')))
     rebind_df = rebind_df.loc[:, ~rebind_df.columns.str.contains('^Unnamed')]
+
+    tracks = pd.read_csv(str(os.path.join(output_path, ('gaps-and-fixes_decisions.csv' if use_gap_fixed else 'bound_decisions.csv'))))
+    tracks = tracks.loc[:, ~tracks.columns.str.contains('^Unnamed')]
+    headers = tracks[['Video #', 'Cell', 'Track']].to_numpy()
+    tracks = slice_tracks_by_video(tracks, headers)
+    headers = np.unique(headers, axis=0)
 
     if not len(comdet_files) == len(mask_files):
         raise ValueError('Different number of Masks and ComDet output, you may have an image without spot.')
@@ -69,7 +85,8 @@ def main(config_path: str = None):
         mask = np.swapaxes(imgio.imread(mask_files[i]), 0, 1)
         n_cell = np.max(mask)
         comdet = pd.read_csv(comdet_files[i], index_col=0)
-        rebind_events = rebind_df[rebind_df['Video #'] == (i+1)]
+        rebind_events = rebind_df[rebind_df['Video #'] == (i+1)] # fetch rebinding events with video number
+        tracks_video = tracks[i+1] # fetch tracks with video number
 
         # parse and assign comdet spots to cell
         fixed_spots = [comdet.iloc[i].to_dict() for i in range(len(comdet))]
@@ -96,6 +113,7 @@ def main(config_path: str = None):
             if len(spots_cell[cell]) < 2:
                 continue
             spots = spots_cell[cell]
+            kill = False
             for j in range(len(spots_cell[cell]) - 1):
                 for k in range(len(spots_cell[cell])):
                     overlap = 0
@@ -105,12 +123,34 @@ def main(config_path: str = None):
                     if (float(overlap) / spots[j][1] > allowed_spot_overlap
                         or float(overlap) / spots[k][1] > allowed_spot_overlap):
                         _.append(cell)
+                        kill = True
+                        break
+                if kill: break
+
         for cell in _:
             del spots_cell[cell]
         print_log('\t: Number of cells eliminated because of spots overlap:', len(_))
 
-
-
+        # Assign rebinding events and tracks to cells
+        if len(rebind_events) < 1:
+            print_log('\t: SKIP: no strict rebinding event recorded for video #' + str(i+1))
+            continue
+        rebinds_cell = {}
+        tracks_cell = {}
+        for event in [rebind_events.iloc[i].to_dict() for i in range(len(rebind_events))]:
+            del event['Video #']
+            cell = int(event['Cell'])
+            if cell in rebinds_cell:
+                rebinds_cell[cell].append(event)
+            else:
+                rebinds_cell[cell] = [event]
+        for track_raw in tracks_video:
+            track = track_raw[['Frame', 'x', 'y', 'Bound']].values
+            cell = track_raw.iloc[0]['Cell']
+            if cell in tracks_cell:
+                tracks_cell[cell].append(track)
+            else:
+                tracks_cell[cell] = [track]
     return
 
 
@@ -155,6 +195,33 @@ def simulate_spot_coordinates(center: tuple, area: int, bounds: tuple, max_itera
             coords.append(pix.copy())
             n_pix -= 1
     return coords
+
+'''
+================================================================================================================
+TRACK PROCESSING
+================================================================================================================
+'''
+
+# slice tracks based on headers
+def slice_tracks_by_video(tracks, headers):
+    indices = []
+    save = np.array([-1, -1, -1])
+    for i in range(headers.shape[0]):
+        if not np.all(headers[i] == save):
+            save = headers[i].copy()
+            indices.append(i)
+    indices.append(headers.shape[0])
+
+    tracks_sliced = {}
+    for i in range(len(indices) - 1):
+        sliced = tracks.iloc[indices[i] : indices[i+1], :]
+        video_n = sliced.iloc[0]['Video #']
+        if video_n in tracks_sliced:
+            tracks_sliced[video_n].append(sliced)
+        else:
+            tracks_sliced[video_n] = [sliced]
+    return tracks_sliced
+
 '''
 ================================================================================================================
 FILE HANDLING
