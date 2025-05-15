@@ -18,9 +18,8 @@ Output:
     TODO: annotate when done
 
 Parameters:
-    TODO: annotate when done
     allowed_spot_overlap: percentage area overlap allowed for particle spots in the same cell, skips cell if exceeds.
-
+    allowed_dist_to_spot: allowed distance to the closest spot coordinate to be counted as colocalized
     conditional:
         use_gap_fixed: Use tracks processed by gaps_and_fixes.py, if False use tracks only processed by bound_classification.py instead.
 """
@@ -57,11 +56,12 @@ def main(config_path: str = None):
 
     # additional configs and parameters
     allowed_spot_overlap = configs['rebind-fixed-particle'].get('allowed_spot_overlap', 'None')
+    allowed_dist_to_spot = configs['rebind-fixed-particle'].get('allowed_dist_to_spot', 'None')
     use_gap_fixed = configs['toggle']['use_gap_fixed']
-
 
     # set default parameter when not specified
     if isinstance(allowed_spot_overlap, str): allowed_spot_overlap = 0.0
+    if isinstance(allowed_dist_to_spot, str): allowed_dist_to_spot = 0.0
 
     # file lists
     comdet_files = natsorted(get_file_names_with_ext(comdet_path, '.csv'))
@@ -78,6 +78,10 @@ def main(config_path: str = None):
 
     if not len(comdet_files) == len(mask_files):
         raise ValueError('Different number of Masks and ComDet output, you may have an image without spot.')
+
+    # Recorded output
+    out_rebinds = []
+    out_track_events = []
 
     for i in range(len(mask_files)):
         # read files
@@ -102,9 +106,9 @@ def main(config_path: str = None):
             spot_area = spot['NArea']
             spot_cords = simulate_spot_coordinates(spot_center, spot_area, spot_bounds)
             if spot_ncell in spots_cell:
-                spots_cell[spot_ncell].append((spot_center, spot_area, spot_bounds, spot_cords))
+                spots_cell[spot_ncell].append((len(spots_cell[spot_ncell]) + 1, spot_center, spot_area, spot_bounds, spot_cords))
             else:
-                spots_cell[spot_ncell] = [(spot_center, spot_area, spot_bounds, spot_cords)]
+                spots_cell[spot_ncell] = [(1, spot_center, spot_area, spot_bounds, spot_cords)]
         print_log('\t: Number of rogue spots (spots not in cell mask):', _)
 
         # filter spots and cells based on overlap in the same cell
@@ -117,11 +121,11 @@ def main(config_path: str = None):
             for j in range(len(spots_cell[cell]) - 1):
                 for k in range(len(spots_cell[cell])):
                     overlap = 0
-                    for cords in spots[j][3]:
-                        if np.any(np.all(cords == spots[k][3], axis=1)):
+                    for cords in spots[j][4]:
+                        if np.any(np.all(cords == spots[k][4], axis=1)):
                             overlap += 1
-                    if (float(overlap) / spots[j][1] > allowed_spot_overlap
-                        or float(overlap) / spots[k][1] > allowed_spot_overlap):
+                    if (float(overlap) / spots[j][2] > allowed_spot_overlap
+                        or float(overlap) / spots[k][2] > allowed_spot_overlap):
                         _.append(cell)
                         kill = True
                         break
@@ -138,7 +142,6 @@ def main(config_path: str = None):
         rebinds_cell = {}
         tracks_cell = {}
         for event in [rebind_events.iloc[i].to_dict() for i in range(len(rebind_events))]:
-            del event['Video #']
             cell = int(event['Cell'])
             if cell in rebinds_cell:
                 rebinds_cell[cell].append(event)
@@ -151,6 +154,137 @@ def main(config_path: str = None):
                 tracks_cell[cell].append(track)
             else:
                 tracks_cell[cell] = [track]
+
+        # Process rebinding events, assign spot number to event endpoints
+        _ = 0 # number of rebind endpoints assigned (each event has two endpoints)
+        __ = 0 # number of rebind endpoints total
+        for cell in rebinds_cell:
+            for event in rebinds_cell[cell]:
+                __ += 2
+                s1 = pos_to_spot(event['x1'], event['y1'], spots_cell[cell], allowed_dist_to_spot, allowed_spot_overlap)
+                s2 = pos_to_spot(event['x2'], event['y2'], spots_cell[cell], allowed_dist_to_spot, allowed_spot_overlap)
+                if s1 != 0: _ += 1
+                if s2 != 0: _ += 1
+                event['From'] = s1
+                event['To'] = s2
+        print_log('\t: Assigned rebind endpoints:', _, 'Total', __)
+
+        # Process track events, assign spot number to each event
+        events_cell = {}
+        _ = 0 # number of events assigned
+        __ = 0 # number of events total
+        for cell in tracks_cell:
+            events = {}
+            for track in tracks_cell[cell]:
+                for event in split_track_to_behaviors(track):
+                    event_avg = np.average(event, axis=0)
+                    event_spot = pos_to_spot(event_avg[1], event_avg[2], spots_cell[cell], allowed_dist_to_spot, allowed_spot_overlap)
+                    __ += 1
+                    if event_spot != 0: _ += 1
+                    if event_spot in events:
+                        events[event_spot].append(event)
+                    else:
+                        events[event_spot] = [event]
+            events_cell[cell] = events
+        print_log('\t: Assigned track events:', _, 'Total', __)
+
+        # Record rebind time and categorize each rebinding event
+        rebind_times = {'same': [], 'diff': [], 'other': []}
+        for cell in rebinds_cell:
+            for event in rebinds_cell[cell]:
+                if event['From'] == 0 or event['To'] == 0:
+                    event['Spot'] = 'other'
+                    rebind_times['other'].append(event['Time'])
+                elif event['From'] == event['To']:
+                    event['Spot'] = 'same'
+                    rebind_times['same'].append(event['Time'])
+                else:
+                    event['Spot'] = 'diff'
+                    rebind_times['diff'].append(event['Time'])
+                out_rebinds.append(event)
+        print_log('\tRebinding to the same spot:')
+        if len(rebind_times['same']) != 0:
+            print_log('\t-> ' + str(pd.Series(rebind_times['same']).describe()).replace('\n', '\t'))
+        else:
+            print_log('\t-> No event recorded.')
+        print_log('\tRebinding to different spots:')
+        if len(rebind_times['diff']) != 0:
+            print_log('\t-> ' + str(pd.Series(rebind_times['diff']).describe()).replace('\n', '\t'))
+        else:
+            print_log('\t-> No event recorded.')
+        print_log('\tRebinding (Others):')
+        if len(rebind_times['other']) != 0:
+            print_log('\t-> ' + str(pd.Series(rebind_times['other']).describe()).replace('\n', '\t'))
+        else:
+            print_log('\t-> No event recorded.')
+
+        # Record bound time and categorize each track event
+        bound_time = {'on': [], 'off': []} # on spot, off spot
+        events_time = 0 # all event time
+        for cell in events_cell:
+            for spot in events_cell[cell]:
+                for event in events_cell[cell][spot]:
+                    behavior = int(event[0, 3])
+                    event_avg = np.average(event, axis=0)
+                    event_out = {'Video #': i+1, 'Cell': cell, 'Bound': behavior, 'Spot #': spot,
+                                 'x_avg': event_avg[1], 'y_avg': event_avg[2], 'Time': event.shape[0]}
+                    events_time += event.shape[0]
+                    if behavior >= 2:
+                        if spot == 0:
+                            bound_time['off'].append(event.shape[0])
+                        else:
+                            bound_time['on'].append(event.shape[0])
+                    out_track_events.append(event_out)
+        print_log('\tBinding events colocalization with spot')
+        print_log('\t-> on spot:', np.sum(bound_time['on']), 'frames')
+        print_log('\t-> off spot:', np.sum(bound_time['off']), 'frames')
+        print_log('\t-> total binding:', np.sum(bound_time['on']) + np.sum(bound_time['off']), 'frames')
+        print_log('\t-> total events:', events_time, 'frames')
+        print_log('\t-> proportion of on-spot binding / all binding:',
+                  float(np.sum(bound_time['on'])) / (np.sum(bound_time['on']) + np.sum(bound_time['off'])))
+        print_log('\t-> proportion of on-spot binding / all events:',
+                  float(np.sum(bound_time['on'])) / events_time)
+
+    # summary stats
+    print_log('\n[Analysis]')
+    out_rebinds = pd.DataFrame(out_rebinds)
+    out_track_events = pd.DataFrame(out_track_events)
+
+    rebinds_same = out_rebinds.loc[out_rebinds['Spot'] == 'same']['Time'].to_numpy()
+    rebinds_diff = out_rebinds.loc[out_rebinds['Spot'] == 'diff']['Time'].to_numpy()
+    rebinds_other =  out_rebinds.loc[out_rebinds['Spot'] == 'other']['Time'].to_numpy()
+    print_log('__________Rebind_________')
+    print_log('Rebinding to the same spot:')
+    if len(rebinds_same) != 0:
+        print_log('-> ' + str(pd.Series(rebinds_same).describe()).replace('\n', '\t'))
+    else:
+        print_log('-> No event recorded.')
+    print_log('Rebinding to different spots:')
+    if len(rebinds_diff) != 0:
+        print_log('-> ' + str(pd.Series(rebinds_diff).describe()).replace('\n', '\t'))
+    else:
+        print_log('-> No event recorded.')
+    print_log('Rebinding (Others):')
+    if len(rebinds_other) != 0:
+        print_log('-> ' + str(pd.Series(rebinds_other).describe()).replace('\n', '\t'))
+    else:
+        print_log('-> No event recorded.')
+
+    bound_events = out_track_events.loc[out_track_events['Bound'] >= 2]
+    on_bound_time = np.sum(bound_events.loc[bound_events['Spot #'] > 0]['Time'].to_numpy())
+    off_bound_time = np.sum(bound_events.loc[bound_events['Spot #'] == 0]['Time'].to_numpy())
+    total_event_time = np.sum(out_track_events['Time'].to_numpy())
+    print_log('\n____Binding_Colocalize___')
+    print_log('on spot:', on_bound_time, 'frames')
+    print_log('off spot:', off_bound_time, 'frames')
+    print_log('total binding:', on_bound_time + off_bound_time, 'frames')
+    print_log('total events:', total_event_time, 'frames')
+    print_log('proportion of on-spot binding / all binding:', float(on_bound_time) / (on_bound_time + off_bound_time))
+    print_log('proportion of on-spot binding / all events:', float(on_bound_time) / total_event_time)
+
+    # output
+    out_rebinds.to_csv(str(os.path.join(output_path, 'rebind-fixed-particle_rebinding-events.csv')))
+    out_track_events.to_csv(str(os.path.join(output_path, 'rebind-fixed-particle_all-events.csv')))
     return
 
 
@@ -180,7 +314,7 @@ def simulate_spot_coordinates(center: tuple, area: int, bounds: tuple, max_itera
 
     # generate direction indices for a spiral out expansion of coordinates
     dirindex = []
-    for i in range(256):
+    for i in range(max_iterable):
         if i < 2:
             dirindex.append(i)
             continue
@@ -195,6 +329,29 @@ def simulate_spot_coordinates(center: tuple, area: int, bounds: tuple, max_itera
             coords.append(pix.copy())
             n_pix -= 1
     return coords
+
+def pos_to_spot(x:float, y:float, spots: list, dist_allowance:float = 0, allowed_overlap:float = 0):
+    '''
+    Assign the spot corresponding to the position given
+    :param x: (float) x-coordinate
+    :param y: (float) y-coordinate
+    :param spots: (list) parsed spot information, (spot number, center, area, bounds, coordinates)
+    :param dist_allowance: (float) distance closest to the spot coordinates that makes the position counted as in the spot
+    :param allowed_overlap: (float) percentage area overlap allowed for particle spots in the same cell
+    :return: (int) assigned spot number, 0 for background
+    '''
+
+    pix = np.array([x, y]).astype(int)
+
+    # simplest case, don't need any calculations
+    if allowed_overlap == 0 and dist_allowance == 0:
+        for spot in spots:
+            spot_coord = spot[4]
+            if np.any(np.all(pix == spot_coord, axis=1)):
+                return spot[0]
+        return 0
+
+    return 0
 
 '''
 ================================================================================================================
@@ -221,6 +378,17 @@ def slice_tracks_by_video(tracks, headers):
         else:
             tracks_sliced[video_n] = [sliced]
     return tracks_sliced
+
+
+# split track by bound behavior, used for colocalization analysis
+def split_track_to_behaviors(track:np.ndarray):
+    indices = [] # indices to split the tracks, first frame of the next event
+    behavior = track[0, 3] # first behavior
+    for i in range(track.shape[0]):
+        if track[i, 3] != behavior:
+            behavior = track[i, 3]
+            indices.append(i)
+    return np.split(track, indices, axis=0)
 
 '''
 ================================================================================================================
