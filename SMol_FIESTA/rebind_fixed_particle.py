@@ -15,7 +15,8 @@ Input:
     Determined by parameter: {use_gap_fixed}
 
 Output:
-    TODO: annotate when done
+    {csv_path}/{output_folder_name}/rebind-fixed-particle_rebinding-events.csv
+    {csv_path}/{output_folder_name}/rebind-fixed-particle_all-events.csv
 
 Parameters:
     allowed_spot_overlap: percentage area overlap allowed for particle spots in the same cell, skips cell if exceeds.
