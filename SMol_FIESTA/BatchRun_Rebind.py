@@ -9,6 +9,7 @@ from SMol_FIESTA import bound_classification
 from SMol_FIESTA import gaps_and_fixes
 from SMol_FIESTA import rebind_analysis
 from SMol_FIESTA import rebind_MSD
+from SMol_FIESTA import rebind_fixed_particle
 from natsort import natsorted
 import numpy as np
 from skimage import io as imgio
@@ -30,22 +31,34 @@ def run_scripts():
 
     # open config file
     if not config_path:
-        __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-        config_path = os.path.join(__location__, 'script-config.toml')
-    with open(config_path, 'rb') as config_file:
-        configs = tomllib.load(config_file)
+        print('Unknown config file location. Please pass in a config file via -c option.')
+        print('Attempting to find default script-config.toml.')
+        config_path = os.path.join(os.getcwd(), 'script-config.toml')
+    try:
+        with open(config_path, 'rb') as config_file:
+            configs = tomllib.load(config_file)
+    except FileNotFoundError:
+        print('Config file not found or invalid.')
+        return
 
     # only checks the file structure
     if args.check_files:
         print('\n\"check-files\" option is selected. Running checks on the file structure specified in config.')
         csv_path = configs['path']['csv_path']
         mask_path = configs['path']['mask_path']
+        if configs['toggle']['run_fixed_particle']:
+            comdet_path = configs['path']['comdet_path']
+            comdet_files = natsorted(track_sorting.get_file_names_with_ext(comdet_path, 'csv'))
         masks = natsorted(track_sorting.get_file_names_with_ext(mask_path, 'png'))
         csv_sorted = track_sorting.csv_name_sort_suffix(csv_path, 'spotsAll')
         csv_keys = natsorted(list(csv_sorted.keys()))
 
         # check file list length match
-        print('\nCount\nTracks (csv):', len(csv_sorted.keys()), '; Masks (png):', len(masks), '\n\nMask-Track')
+        print('\nCount\nTracks (csv):', len(csv_sorted.keys()),
+              '\nMasks (png):', len(masks))
+        if configs['toggle']['run_fixed_particle']:
+            print('ComDet (csv):', len(comdet_files))
+        print('\n\nMask-Track')
         if not len(csv_sorted.keys()) == len(masks):
             raise ValueError('Different number of Masks and Videos, you may have a video without tracks')
 
@@ -53,6 +66,8 @@ def run_scripts():
         for i in range(len(masks)):
             mask = np.swapaxes(imgio.imread(masks[i]), 0, 1)
             n_cell = np.max(mask)
+            if configs['toggle']['run_fixed_particle']:
+                print('\tComDet:', comdet_files[i])
             print('\tMask:', masks[i], '; number of cells:', n_cell)
             spots_video = track_sorting.index_format(natsorted(csv_sorted[csv_keys[i]]), n_cell)
             for k in range(len(spots_video)):
@@ -64,7 +79,6 @@ def run_scripts():
 
     # run full scripts
     else:
-
         track_sorting.main(config_path)
         print("")
         cell_info.main(config_path)
@@ -78,6 +92,10 @@ def run_scripts():
 
         rebind_analysis.main(config_path)
         print("")
+
+        if configs['toggle']['run_fixed_particle']:
+            rebind_fixed_particle.main(config_path)
+            print("")
 
         if configs['toggle']['run_visualizer']:
             visualizer.main(config_path)

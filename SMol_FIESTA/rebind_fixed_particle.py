@@ -17,6 +17,7 @@ Input:
 Output:
     {csv_path}/{output_folder_name}/rebind-fixed-particle_rebinding-events.csv
     {csv_path}/{output_folder_name}/rebind-fixed-particle_all-events.csv
+    {csv_path}/{output_folder_name}/rebind-fixed-particle_assigned-spots.pkl
 
 Parameters:
     allowed_spot_overlap: percentage area overlap allowed for particle spots in the same cell, skips cell if exceeds.
@@ -32,7 +33,7 @@ import time
 import os
 from natsort import natsorted
 import logging
-import shutil
+import pickle
 import tomllib
 import argparse
 
@@ -83,6 +84,7 @@ def main(config_path: str = None):
     # Recorded output
     out_rebinds = []
     out_track_events = []
+    out_spots = {}
 
     for i in range(len(mask_files)):
         # read files
@@ -246,6 +248,9 @@ def main(config_path: str = None):
         print_log('\t-> proportion of on-spot binding / all events:',
                   float(np.sum(bound_time['on'])) / events_time)
 
+        # save spots in output
+        out_spots[mask_files[i]] = spots_cell
+
     # summary stats
     print_log('\n[Analysis]')
     out_rebinds = pd.DataFrame(out_rebinds)
@@ -286,6 +291,8 @@ def main(config_path: str = None):
     # output
     out_rebinds.to_csv(str(os.path.join(output_path, 'rebind-fixed-particle_rebinding-events.csv')))
     out_track_events.to_csv(str(os.path.join(output_path, 'rebind-fixed-particle_all-events.csv')))
+    with open(str(os.path.join(output_path, 'rebind-fixed-particle_assigned-spots.pkl')), 'wb') as f:
+        pickle.dump(out_spots, f, protocol=pickle.HIGHEST_PROTOCOL)
     return
 
 
@@ -352,7 +359,28 @@ def pos_to_spot(x:float, y:float, spots: list, dist_allowance:float = 0, allowed
                 return spot[0]
         return 0
 
-    return 0
+    # go through each spot for matches
+    pending = []
+    for spot in spots:
+        spot_coord = spot[4]
+        distances = np.linalg.norm(spot_coord - np.array((x, y)), axis=1)
+        min_dist = np.min(distances) # min dist to spot periphery
+        if min_dist <= dist_allowance:
+            pending.append(spot)
+    if len(pending) == 0:
+        return 0
+    if len(pending) == 1:
+        return pending[0][0]
+
+    # if more than 1 spot is contested, evaluate based on distance to spot center
+    min_dist = float('inf') # to center this time, might have position in the overlapping region
+    winner = pending[0]
+    for spot in pending:
+        spot_dist = np.linalg.norm(np.array(spot[1])-np.array((x, y)))
+        if spot_dist < min_dist:
+            min_dist = spot_dist
+            winner = spot
+    return winner[0]
 
 '''
 ================================================================================================================

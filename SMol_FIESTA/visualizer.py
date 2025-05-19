@@ -215,6 +215,7 @@ def main(config_path: str = None):
 
     spot_diameter = configs.get('visualizer', {}).get('spot_diameter', 6.0)
 
+    print('[Visualizer]')
     for i, mask_file in enumerate(masks):
         print(f'(Video {i+1}) -> Mask: {mask_file}')
         mask = np.swapaxes(imgio.imread(mask_file), 0, 1)
