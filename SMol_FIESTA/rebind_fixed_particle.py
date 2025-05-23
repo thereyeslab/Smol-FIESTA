@@ -20,7 +20,6 @@ Output:
     {csv_path}/{output_folder_name}/rebind-fixed-particle_assigned-spots.pkl
 
 Parameters:
-    allowed_spot_overlap: percentage area overlap allowed for particle spots in the same cell, skips cell if exceeds.
     allowed_dist_to_spot: allowed distance to the closest spot coordinate to be counted as colocalized
     conditional:
         use_gap_fixed: Use tracks processed by gaps_and_fixes.py, if False use tracks only processed by bound_classification.py instead.
@@ -57,12 +56,11 @@ def main(config_path: str = None):
         raise ValueError('Directory do not exist, please run track_sorting.py first.')
 
     # additional configs and parameters
-    allowed_spot_overlap = configs['rebind-fixed-particle'].get('allowed_spot_overlap', 'None')
     allowed_dist_to_spot = configs['rebind-fixed-particle'].get('allowed_dist_to_spot', 'None')
     use_gap_fixed = configs['toggle']['use_gap_fixed']
 
     # set default parameter when not specified
-    if isinstance(allowed_spot_overlap, str): allowed_spot_overlap = 0.0
+    allowed_spot_overlap = 0.0
     if isinstance(allowed_dist_to_spot, str): allowed_dist_to_spot = 0.0
 
     # file lists
