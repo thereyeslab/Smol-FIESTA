@@ -13,8 +13,8 @@ This script serves as the entry point to run a series of modular analysis steps 
 
 
 ###### Command-line Arguments:
-it creates a command-line interface parser which make it easy to run from the command line by allowing users to:
-1. specify the path to a config file (-c config.toml). If not provided, it defaults to None.
+It creates a command-line interface parser which makes it easy to run from the command line by allowing users to:
+1. Specify the path to a config file (-c config.toml). If not provided, it defaults to None.
 2. Run a check of file inputs (-d)
 3. View a helpful message if anything is wrong or missing
 
@@ -24,7 +24,7 @@ python script.py -c configs/my_config.toml -d
 ```
 
 ###### Config file loading
-It loads the config file. If no path is passed, defaults to script-config.toml in the current directory.
+It loads the config file. If no path is passed, it defaults to script-config.toml in the current directory.
 
 ###### File Check Mode
 If --check-files is used:
@@ -91,17 +91,17 @@ Calculates Euclidean distances between each spot and its neighbors  (defined by 
 If a neighbor is not available (e.g., at the end of a track), appends dist_none.
 Each spot ends up with additional values: the distances to its neighbors at the specified relative indices.
 
-##### OPTIONAL in case of the organism is bacteria (spesifically E.coli)
+##### OPTIONAL in case the organism is small (e.g., Bacteria)
 In dense microscopy images where cells are small and tightly packed, the tracking algorithm (e.g., TrackMate) can mistakenly:
 - Assign a track from one cell to a neighboring cell.
 - Merge two distinct tracks into a single track.
 
 To mitigate these issues, the pipeline applies several filtering steps under the bacteria_analysis flag. These steps help detect and eliminate track artifacts caused by spatial and temporal overlaps:
 1. Eliminate repeated frames within the same track:
-Tracks should have one spot per frame. Multiple spots in the same frame indicate a potential mis-link. Function `eliminate_repeated_frames()` keeps the most plausible spot and removes the rest.
-2. Check for excessive overlap between tracks in the same frame
-Tracks that significantly overlap in the same frame likely belong to different cells.
-If the number of concurrent tracks exceeds the allowed_concurrent threshold, the entire cell's data is skipped.
+Tracks should have one spot per frame. Multiple spots in the same frame indicate a potential mislink. Function `eliminate_repeated_frames()` keeps the most plausible spot and removes the rest.
+2. Check for excessive overlap between tracks in the same frame (If merging tracks is allowed in TrackMate)
+Long tracks can be cut short by the presence of random short localizations. When merging is allowed, a single track with multiple concurrent localizations will be created.
+If the number of frames with multiple concurrent tracks exceeds the allowed_concurrent threshold, the entire cell's data is skipped.
 3. Remove long intervals of concurrent spots
 When multiple tracks overlap persistently across many frames, it may indicate sustained confusion between tracks. The `concurrent_count()` and `remove_frames()` functions detect and remove such frames if the overlap duration exceeds concurrent_max, helping to isolate reliable track segments.
 
@@ -122,7 +122,7 @@ Each image is a labeled mask where pixel values represent individual cells (0 = 
 - Configuration file (.toml) specifying paths
 
 ##### Output
-CSV file in the output directory with these coloumns: 
+CSV file in the output directory with these columns: 
 ['Mask #', 'Mask Name', '# Cells', 'Cell', 'Area', 'Length']
 
 # bound_classification.py 
@@ -140,7 +140,7 @@ This script performs frame-by-frame classification of particle behavior within s
 - `ConstrictedDiffusion`: 1 if relaxed and strict disagree; otherwise 0
 - `Bound`: final combined score (0 = free, 1 = constrained, 2 = strictly bound)
 
-The final coloumns:
+The final columns:
 [Video #, Video Name, Cell, Track, Frame, x, y, Intensity, RelaxedBound, StrictBound, ContrictedDiffusion, Bound]
 
 ##### The logic of classification:
@@ -149,8 +149,8 @@ For each spot in a track, the script evaluates its spatial proximity to neighbor
 - If it exceeds the threshold, it is marked as 0.
 
 The `function process_track()` generates these binary arrays for each spot under two sets of distance thresholds:
-- Relaxed threshold: allows for greater distances, favoring more lenient binding detection.
-- Strict threshold: enforces tighter distance limits for more confident binding classification.
+- Relaxed threshold: allows for greater distances, used for classification of constrained diffusion.
+- Strict threshold: enforces tighter distance limits for binding classification.
 
 The binary arrays are passed to two decision functions:
 
@@ -173,9 +173,9 @@ This module further refines track classification by analyzing and correcting tem
    - Type of neighboring events (e.g., bound vs. diffusing)
    - Duration of surrounding events
 
-The function `process_gaps` is responsible for that. This function creates synthetic data points for frames that were skipped during tracking (gaps), inserting them based on behavioral context using a custom rule: Gaps shorter than a configurable threshold (max_bound_gapFill) and surrounded by strict binding events can be reclassified as binding. The position of the syntetic data point is filled with [-1, -1] as a placeholder.
+The function `process_gaps` is responsible for that. This function creates synthetic data points for frames that were skipped during tracking (gaps), inserting them based on behavioral context using a custom rule: Gaps shorter than a configurable threshold (max_bound_gapFill) and surrounded by strict binding events can be reclassified as binding. The position of the synthetic data point is filled with [-1, -1] as a placeholder.
 If a track has more than a configurable number of gaps, it will be aborted from the analysis. 
-2. Event Relabling: 
+2. Event Relabeling: 
 The function `event_separation`, splits a single particle track into discrete "events" segments where the particle shows consistent behavior, such as being bound, diffusive, or in transition. It also counts how often the track transitions into or out of a particular state. 
 The function `pass_events`, cleans and merges behavior-labeled segments (events) based on their duration. Specifically, it:
 - Relabels short events (shorter than min_time) by replacing their behavior label with a substitute.
@@ -197,11 +197,11 @@ Tracks outside these bounds are excluded from downstream analysis with the messa
 
 4. Export to SMAUG Format
 
-Tracks are translated into four SMAUG-compatible CSV files: 1. All tracks (after relabling)
+Tracks are translated into four SMAUG-compatible CSV files: 1. All tracks (after relabeling)
 and Separated tracks by event type: 2. Diffusing, 3. Constricted (CD), and 4. Bound (SB).
 
 ##### input: 
-`bound_decisions.csv` file which is outputed from the `bound_classification.py` module. 
+`bound_decisions.csv` file, which is an output from the `bound_classification.py` module. 
 [Video #, Video Name, Cell, Track, Frame, x, y, Intensity, RelaxedBound, StrictBound, ContrictedDiffusion, Bound]
 
 ##### Outputs
@@ -221,7 +221,7 @@ and Separated tracks by event type: 2. Diffusing, 3. Constricted (CD), and 4. Bo
 
 # rebind_analysis.py
 
-This script identifies and analyzes rebinding events—cases where a molecule temporarily unbinds from a site (or changes its behavior) and later rebinds, either to the same location or to a different one, based on positional thresholds. It basically applies spatial and temporal criteria to classify a track into behavioral states and quantify their transitions over time. It works on single-molecule tracks that were previously processed for binding behavior (via bound_classification.py) and optionally gap-filled (via gaps_and_fixes.py).
+This script identifies and analyzes rebinding events—cases where a molecule temporarily unbinds from a site (or changes its behavior) and later rebinds, either to the same location or to a different one, based on positional thresholds. It applies spatial and temporal criteria to classify a track into behavioral states and quantify their transitions over time. It works on single-molecule tracks that were previously processed for binding behavior (via bound_classification.py) and optionally gap-filled (via gaps_and_fixes.py).
 
 This module enables:
 - Detection of re-binding events, where a molecule may leave and re-enter the bound state.
@@ -229,7 +229,7 @@ This module enables:
 - Quantification of behavioral transitions using transition matrices.
 
 **Logic**: 
-For each track the function `rebind_record_proximity` detects the binding event followed by diffusing event and then another binding event. Then depenidng on the 
+For each track, the function `rebind_record_proximity` detects the binding event, followed by a diffusion event, and then another binding event. Then depending on the 
 - The duration of unbinding.
 - The distance between the unbinding and rebinding locations.
 It determines if the rebinding is valid and if the particle rebinds to the same position or another position. It also categorizes these events and tabulates statistics for further analysis.
@@ -243,7 +243,10 @@ The script performs analysis under two levels of stringency:
 - Relaxed: Allows more flexible criteria to classify an event as rebinding (e.g., "constricted diffusion" as bound).
 - Strict: Requires stricter classification (e.g., only "strictly bound" state is considered bound).
 
-Then there are three other key functions that process the behavior of the spot throughout the track. Mainely how long an event lasts and what is the next behavior and if it is an stable behavior:
+
+--pablo--
+
+Then, three other key functions process the behavior of the spot throughout the track. Mainely how long an event lasts and what is the next behavior and if it is an stable behavior:
 `bound_record`: Records all bound state durations. 
 (Bound state: Continuous stretches where the behavior matches a "bound" criterion )
 What It Does:
