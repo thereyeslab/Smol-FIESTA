@@ -88,7 +88,7 @@ def main(config_path:str = None):
     shutil.copy(config_path, str(os.path.join(output_path + 'script-config.toml')))
 
     masks = natsorted(get_file_names_with_ext(mask_path, 'png'))
-    csv_sorted = csv_name_sort_suffix(csv_path, 'spotsAll')
+    csv_sorted = csv_name_sort_suffix(csv_path, 'spots')
     csv_keys = natsorted(list(csv_sorted.keys()))
     print(len(csv_sorted.keys()), len(masks))
     if not len(csv_sorted.keys()) == len(masks):
