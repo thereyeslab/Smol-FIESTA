@@ -68,7 +68,7 @@ See `docs/input_output.md` and the `example_data/` folder for full output sample
 **1. Download or clone the repository:**
 ``` bash
 git clone https://github.com/thereyeslab/Smol-FIESTA.git
-cd SMol_FIESTA
+cd SMol-FIESTA
 ```
 **2. Create and activate a conda environment:**
 ``` bash
