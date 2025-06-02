@@ -243,10 +243,7 @@ The script performs analysis under two levels of stringency:
 - Relaxed: Allows more flexible criteria to classify an event as rebinding (e.g., "constricted diffusion" as bound).
 - Strict: Requires stricter classification (e.g., only "strictly bound" state is considered bound).
 
-
---pablo--
-
-Then, three other key functions process the behavior of the spot throughout the track. Mainely how long an event lasts and what is the next behavior and if it is an stable behavior:
+Then, three other key functions process the behavior of the spot throughout the track. Mainly, how long an event lasts, what is the next behavior, and if it is a stable behavior:
 `bound_record`: Records all bound state durations. 
 (Bound state: Continuous stretches where the behavior matches a "bound" criterion )
 What It Does:
@@ -254,16 +251,16 @@ What It Does:
 - Filters out short, noisy events (< min_time).
 
 Outputs:
-- list of durations of all qualifying bound events
+- List of durations of all qualifying bound events
 
 `constrained_record`:
 Records constrained diffusion (where a molecule is partially confined but not fully bound) and what follows after.
 (Constrained diffusion (state == 1) followed by either: Free diffusion (== 0) or Binding (== 2)
 What It Does:
 - Identifies segments of constrained diffusion (min_time_constrained ≤ time ≤ max_time_constrained).
-- Then checks the duration of the following event . If it's long enough (≥ min_time_bound), it's considered successful.
+- Then checks the duration of the following event. If it's long enough (≥ min_time_bound), it's considered successful.
 - Outputs: Counts:
-How often constrained diffusion is followed by: Diffusion (code 0) and Binding (code ≥ 2)
+How often is constrained diffusion followed by: Diffusion (code 0) and Binding (code ≥ 2)
 
 `diffusion_record`: Analyzes diffusive segments of a track to find how long diffusion lasts before a molecule binds again.
 
@@ -278,7 +275,7 @@ Outputs:
     - Short bindings (unstable)
     - Long bindings (stable)
 
-Therefore, for each track, the script analyzes the bahavior of spot throught the track: whether there is a rebinding and if it rebinds to the same location or not, and how long is the duration of the events and what is the next event that happens. The script also calculates the proportion of different events for each track. 
+Therefore, for each track, the script analyzes the behavior of the spot throughout the track: whether there is rebinding and, if so, whether it rebinds to the same location or not; the duration of the events; and what the next event is. The script also calculates the proportion of different events for each track. 
 
 Finally, for all the tracks together, the function `calculate_transition_matrices` produces a 3*3 matrix which quantifies how often transitions occur between dynamic states: fast diffusion (F.dif), confined diffusion (C.Dif), and bound (Bound). It outputs both absolute counts and transition probabilities.
 **Absolute Counts**: The number of observed transitions from one state to another.
@@ -348,13 +345,12 @@ This script calculates the diffusion coefficients (D) and anomalous diffusion ex
 - Segments these by consistent "Bound" label.
 - Calculates MSD curves for each segment based on spot distances between frames.
 - Fits MSD curves to extract D and α.
-- Fit MSD calculations in a gaussian mixture model.
 - Outputs the results (with frame info, state, and fitting values).
 - Generate plots for presenting each population [bound, constrained diffusion, free diffusion] and their MSD distributions.
 
 ** Logic**
 Iterates through all videos → cells → tracks and subdivides tracks into chunks of 4 frames.
-Within each chunk, segments are further split based on consistent "Bound" state.
+Within each chunk, segments are further split based on a consistent "Bound" state.
 Stores each segment with: Bound state, Start/end frames, (x, y) positions. For each consistent-bound segment: Calculates MSD curve and fits using either Brownian-only or anomalous model
 Returns:
 D: diffusion coefficient
@@ -382,8 +378,8 @@ Plots histograms and log-normal fits for diffusion coefficient distributions, us
 Determined by parameter: {use_gap_fixed}
 
 **Ouput**
-(Check the input/output documentation for more detail.)
-`Diffusion_Coefficient_Calculation.csv` : each row in the output CSV file contains:
+(Check the input/output documentation for more details.)
+`Diffusion_Coefficient_Calculation.csv`: each row in the output CSV file contains:
 - Segment identity (Video, Cell, Track, Event)
 - MSD-based measurements:
 - Diffusion Coefficient (D)
