@@ -3,9 +3,11 @@
 # 1. Paths
 # ──────────────────────────────────────────────────────────────────────────────
 [Paths]
-csv_path             = ""        # Folder containing TrackMate CSV exports
-mask_path            = ""        # Folder of per-frame PNG masks (dimensions must match video)
-comdet_path          = ""        # (Optional) Folder with ComDet CSVs for fixed-particle analysis
+
+
+csv_path             = 'D:\Microscopy\SMSNEW\_Yeast_Data_\histone_new\im\ImagesNoMetadata\AnalysisSMolFiesta'       # Folder containing TrackMate CSV exports
+mask_path            = 'D:\Microscopy\SMSNEW\_Yeast_Data_\histone_new\seg'        # Folder of per-frame PNG masks (dimensions must match video)
+comdet_path          = ''        # (Optional) Folder with ComDet CSVs for fixed-particle analysis
 output_folder_name   = "SF2"     # Name for the pipeline’s output directory
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -26,7 +28,6 @@ bacteria_analysis       = true   # Aggressive overlap filtering for single-molec
 allowed_gap_max           = 4     # Max consecutive missing frames before splitting a track
 allowed_track_length_min  = 6     # Discard tracks shorter than this (frames)
 allowed_track_length_max  = 5000  # Discard tracks longer than this (frames)
-dist_range                = 5     # Frames before/after for inter-frame distance calc
 allowed_overlap           = 30    # Overlap frames threshold for collision resolution
 concurrent_max            = 10    # Max consecutive frames with >1 simultaneous spots
 
@@ -47,7 +48,6 @@ min_time_diffusion         = 0      # frames: min for free diffusion; shorter �
 max_bound_gapFill          = 4      # frames: gap allowance to merge into strict-binding
 min_prop_binding           = 0.00   # fraction: min track-level bound+constrained to keep
 max_prop_binding           = 1.01   # fraction: max track-level bound+constrained to keep
-allowed_gapTotal           = 1000000# total gap-fill ops per track (to discard over-blinking)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 6. Rebind-Analysis
@@ -57,12 +57,7 @@ rebind_distance_same          = 1.0     # px: same-site rebinding distance thres
 rebind_distance_diff          = 4.0     # px: nearby-site rebinding distance threshold
 min_time_bound_strict         = 4       # frames: min strict-binding for rebinding logs
 min_time_bound_constrained    = 3       # frames: min constrained-binding for rebinding logs
-min_time_rebinding_relaxed    = 0       # frames: relaxed min diffusion between bindings
-min_time_rebinding_strict     = 10      # frames: strict min diffusion to avoid flicker
-min_time_diffusion            = 0       # frames: min diffusion overall for rebinding
-min_time_diffusion_subsequent = 1       # frames: min diffusion after bind to count subsequent
-max_time_rebinding            = 50      # frames: window to search for rebinding
-max_time_constrained          = 100000  # frames: cap for constrained-binding in rebinding
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 7. MSD-Analysis
