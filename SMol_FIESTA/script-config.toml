@@ -1,58 +1,86 @@
-[path]
-csv_path = 'C:\Users\JpRas\OneDrive\Escritorio\SearchAnalysis\wt\timelapse\AnalysisRebindCBC_start0_Quality5' # csv from trackmate
-mask_path = 'C:\Users\JpRas\OneDrive\Escritorio\SearchAnalysis\wt\seg\all'  # *.png
-comdet_path = '' # optional: *.tif_Results, use exclusively by rebind-fixed-particle
-output_folder_name = 'SF2'
 
-[toggle]
-use_gap_fixed = true # for rebind-analysis to use gap-fixed
-filter_by_binding_prop = true # filter tracks after gap-fixes
-run_visualizer = true # run visualizer after analysis
-run_MSD_calculations = true # run MSD calculations after analysis
-run_fixed_particle = true # run rebind_fixed_particle after analysis
-bacteria_analysis = true # the analysis is run on small cells, additional filter conditions apply, one molecule per cell
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. Paths
+# ──────────────────────────────────────────────────────────────────────────────
+[Paths]
+csv_path             = ""        # Folder containing TrackMate CSV exports
+mask_path            = ""        # Folder of per-frame PNG masks (dimensions must match video)
+comdet_path          = ""        # (Optional) Folder with ComDet CSVs for fixed-particle analysis
+output_folder_name   = "SF2"     # Name for the pipeline’s output directory
 
-[track-sorting]
-allowed_gap_max = 4
-allowed_track_length_min = 6
-allowed_track_length_max = 2000
-dist_range = 5
-# if bacteria_analysis = True
-allowed_overlap = 30 # allowed total repeated frames in tracks in a cell, eliminate all tracks if exceeds
-concurrent_max = 10 # max concurrent frames in *different* tracks in a cell, eliminate the frames if exceeds.
+# ──────────────────────────────────────────────────────────────────────────────
+# 2. Toggle Flags
+# ──────────────────────────────────────────────────────────────────────────────
+[Toggle]
+use_gap_fixed           = true   # Interpolate short detection gaps before reclassification
+filter_by_binding_prop  = true   # Drop tracks whose bound+constrained fraction is out of range
+run_visualizer          = true   # Generate colored overlay videos of track behaviors
+run_MSD_calculations    = true   # Compute and plot Mean Squared Displacement (MSD) curves
+run_fixed_particle      = true   # Execute experimental ComDet-based rebinding analysis
+bacteria_analysis       = true   # Aggressive overlap filtering for single-molecule (bacterial) data
 
-[bound-classification]
-distance_threshold = 2.0           # 0.72 for 10ms +Error 2.6 for 100ms   1.5 for tianzi
-distance_threshold_strict = 1.2    # 0.28 for 10ms +Error 1.2 for 100ms   0.72 for tianzi
+# ──────────────────────────────────────────────────────────────────────────────
+# 3. Track-Sorting
+# ──────────────────────────────────────────────────────────────────────────────
+[Track-Sorting]
+allowed_gap_max           = 4     # Max consecutive missing frames before splitting a track
+allowed_track_length_min  = 6     # Discard tracks shorter than this (frames)
+allowed_track_length_max  = 5000  # Discard tracks longer than this (frames)
+dist_range                = 5     # Frames before/after for inter-frame distance calc
+allowed_overlap           = 30    # Overlap frames threshold for collision resolution
+concurrent_max            = 10    # Max consecutive frames with >1 simultaneous spots
 
-[gaps-and-fixes]
-min_time_strict = 0
-min_time_constrained = 4
-min_time_diffusion = 0
-max_bound_gapFill = 4
-min_prop_binding = 0.00 # for both constricted and strict, filter condition after gap-fixes
-max_prop_binding = 1.01 # filter also for all-bound tracks, most-likely dirt
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. Bound-Classification
+# ──────────────────────────────────────────────────────────────────────────────
+[Bound-Classification]
+distance_threshold         = 2.0   # px: relaxed binding step threshold over ±4-frame window
+distance_threshold_strict  = 1.2   # px: strict binding threshold (low false-pos) for high-framerate
 
-[rebind-analysis]
-rebind_distance_same = 1.0 # Determines rebinds to same particles < parameter
-rebind_distance_diff = 4.0 # Determines rebinds to diff particles > parameter
-min_time_bound_strict = 4
-min_time_bound_constrained = 3
-min_time_rebinding_relaxed = 0
-min_time_rebinding_strict = 10
-min_time_diffusion = 0
-min_time_diffusion_subsequent = 1 # minimum time required for subsequent event after diffusion
-max_time_rebinding = 50 # after which it will be counted unsuccessful
-max_time_constrained = 50 # after which it will be counted unsuccessful
+# ──────────────────────────────────────────────────────────────────────────────
+# 5. Gaps-&-Fixes
+# ──────────────────────────────────────────────────────────────────────────────
+[Gaps-and-Fixes]
+min_time_strict            = 0      # frames: min length for strict-binding; shorter ⇒ constrained
+min_time_constrained       = 4      # frames: min for constrained diffusion; shorter ⇒ free
+min_time_diffusion         = 0      # frames: min for free diffusion; shorter ⇒ context reclassification
+max_bound_gapFill          = 4      # frames: gap allowance to merge into strict-binding
+min_prop_binding           = 0.00   # fraction: min track-level bound+constrained to keep
+max_prop_binding           = 1.01   # fraction: max track-level bound+constrained to keep
+allowed_gapTotal           = 1000000# total gap-fill ops per track (to discard over-blinking)
 
-[MSD-analysis]
-time_interval_ms = 100  # Frame interval in milliseconds
-pixel_size_um = 0.130   # Pixel size in microns (e.g., 0.130 µm per pixel)
-use_brownian_only = true # set alpha to 1, assume brownian motion
+# ──────────────────────────────────────────────────────────────────────────────
+# 6. Rebind-Analysis
+# ──────────────────────────────────────────────────────────────────────────────
+[Rebind-Analysis]
+rebind_distance_same          = 1.0     # px: same-site rebinding distance threshold
+rebind_distance_diff          = 4.0     # px: nearby-site rebinding distance threshold
+min_time_bound_strict         = 4       # frames: min strict-binding for rebinding logs
+min_time_bound_constrained    = 3       # frames: min constrained-binding for rebinding logs
+min_time_rebinding_relaxed    = 0       # frames: relaxed min diffusion between bindings
+min_time_rebinding_strict     = 10      # frames: strict min diffusion to avoid flicker
+min_time_diffusion            = 0       # frames: min diffusion overall for rebinding
+min_time_diffusion_subsequent = 1       # frames: min diffusion after bind to count subsequent
+max_time_rebinding            = 50      # frames: window to search for rebinding
+max_time_constrained          = 100000  # frames: cap for constrained-binding in rebinding
 
-[visualizer]
-tail_effect_enabled =  true
-spot_diameter = 4
+# ──────────────────────────────────────────────────────────────────────────────
+# 7. MSD-Analysis
+# ──────────────────────────────────────────────────────────────────────────────
+[MSD-Analysis]
+time_interval_ms     = 10.0    # ms: frame interval (must match acquisition)
+pixel_size_um        = 0.094   # µm: physical pixel size for D calculations
+use_brownian_only    = true    # force anomalous exponent α = 1 (pure Brownian fit)
 
-[rebind-fixed-particle]
-allowed_spot_overlap = 0.10 # percentage area overlap allowed for particle spots in the same cell
+# ──────────────────────────────────────────────────────────────────────────────
+# 8. Visualizer
+# ──────────────────────────────────────────────────────────────────────────────
+[Visualizer]
+tail_effect_enabled  = true    # draw motion-blur “tails” for moving spots
+spot_diameter        = 6       # px diameter of each spot in the overlay
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 9. Rebind-Fixed-Particle
+# ──────────────────────────────────────────────────────────────────────────────
+[Rebind-Fixed-Particle]
+allowed_spot_overlap = 0.10    # max fractional area overlap for ComDet spots
