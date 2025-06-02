@@ -7,7 +7,7 @@ setup(
     author_email='jose.rasconperez@mail.mcgill.ca',
     packages=['SMol_FIESTA'],
     install_requires=[
-        "setuptools~=68.2.0",
+        "setuptools>=68.2.0",
         "numpy~=2.2.3",
         "matplotlib~=3.10.0",
         "pandas~=2.2.3",

@@ -463,7 +463,7 @@ def csv_name_sort_suffix(path: str, suffix:str='spotsAll') -> dict:
     flist = get_file_names_with_ext(path, 'csv')
     csv_sorted = {}
     for file in flist:
-        fname = file.split('\\')[-1].split('_')
+        fname = str(os.path.splitext(os.path.basename(file))[0]).split('_')
         if len(fname) < 4:
             continue
         if 'Cell' not in fname:
@@ -483,7 +483,7 @@ def get_file_names_with_ext(path: str, ext: str):
         for file in files:
             fname = file.split('.')
             if (fname[-1] == ext):
-                flist.append(root + '\\' + file)
+                flist.append(str(os.path.join(root, file)))
     return flist
 
 
