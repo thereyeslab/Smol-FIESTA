@@ -46,7 +46,7 @@ def main(config_path:str = None):
             cell = np.array(cells[j])
             minx, maxx, miny, maxy = min(cell[:, 0]), max(cell[:, 0]), min(cell[:, 1]), max(cell[:, 1])
             l = np.sqrt(np.power(maxx-minx+1, 2) + np.power(maxy-miny+1, 2))
-            table.append([i + 1, masks[i].split('\\')[-1], n_cell, j + 1, sizes[1][j + 1], l])
+            table.append([i + 1, os.path.basename(masks[i]), n_cell, j + 1, sizes[1][j + 1], l])
     table = pd.DataFrame(table, columns=columns)
     table.to_csv(str(os.path.join(mask_path, '_cell-info.csv')))
     table.to_csv(str(os.path.join(csv_path, output_folder_name, '_cell-info.csv')))
@@ -70,7 +70,7 @@ def get_file_names_with_ext(path: str, ext: str):
         for file in files:
             fname = file.split('.')
             if (fname[-1] == ext):
-                flist.append(root + '\\' + file)
+                flist.append(os.path.join(root, file))
     return flist
 
 if __name__ == '__main__':

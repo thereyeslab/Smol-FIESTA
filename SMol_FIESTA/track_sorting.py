@@ -501,7 +501,7 @@ def logging_setup(path:str, script_name:str):
     logging.basicConfig(format='%(message)s', level=logging.INFO, handlers=log_targets)
     logging.StreamHandler.terminator = ''
     open(log_file, 'w').close()
-    os.system('cls')
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 
 # Modified print

@@ -154,8 +154,6 @@ def main(config_path:str = None):
             .assign(ContrictedDiffusion=decision_cdiffusion)
             .assign(Bound=decision_overall)
         )
-    #pd.concat(output_relaxed).to_csv(output_path + '\\bound_relaxed.csv')
-    #pd.concat(output_strict).to_csv(output_path + '\\bound_strict.csv')
     pd.concat(output_both).to_csv(str(os.path.join(output_path, 'bound_decisions.csv')))
     return
 
@@ -212,7 +210,7 @@ def logging_setup(path:str, script_name:str):
     logging.basicConfig(format='%(message)s', level=logging.INFO, handlers=log_targets)
     logging.StreamHandler.terminator = ''
     open(log_file, 'w').close()
-    os.system('cls')
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 
 # Modified print

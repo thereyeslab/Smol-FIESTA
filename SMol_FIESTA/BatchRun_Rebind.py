@@ -50,7 +50,7 @@ def run_scripts():
             comdet_path = configs['path']['comdet_path']
             comdet_files = natsorted(track_sorting.get_file_names_with_ext(comdet_path, 'csv'))
         masks = natsorted(track_sorting.get_file_names_with_ext(mask_path, 'png'))
-        csv_sorted = track_sorting.csv_name_sort_suffix(csv_path, 'spotsAll')
+        csv_sorted = track_sorting.csv_name_sort_suffix(csv_path, 'spots')
         csv_keys = natsorted(list(csv_sorted.keys()))
 
         # check file list length match

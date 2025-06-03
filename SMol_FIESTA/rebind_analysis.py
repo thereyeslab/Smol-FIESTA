@@ -527,7 +527,6 @@ def rebind_record_proximity(track, rebind_distance_same, rebind_distance_diff, c
                 else:
                     prev, nxt = 1, 2
                 events_all.append(event.copy())
-                time_int = rebind_trace_avg(track, f, criteria, 1)[0]
                 rebinds.append(
                     rebind_tabulate(event.copy(), prev, nxt) + [dist] +
                     rebind_trace_avg(track, record_f - 1, criteria, -1)[1] +
@@ -785,7 +784,7 @@ def logging_setup(path:str, script_name:str):
     logging.basicConfig(format='%(message)s', level=logging.INFO, handlers=log_targets)
     logging.StreamHandler.terminator = ''
     open(log_file, 'w').close()
-    os.system('cls')
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 
 # Modified print

@@ -157,8 +157,6 @@ def main(config_path:str = None):
         __ += _
 
 
-        if list(header) == [20, 109, 3]:
-            print_log('say hello')
 
         print_log('\t-> Pass Complete:', __, 'relabeling performed,', len(events3), 'events left.')
         counts_operations += __
@@ -476,7 +474,7 @@ def logging_setup(path:str, script_name:str):
     logging.basicConfig(format='%(message)s', level=logging.INFO, handlers=log_targets)
     logging.StreamHandler.terminator = ''
     open(log_file, 'w').close()
-    os.system('cls')
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 
 # Modified print
