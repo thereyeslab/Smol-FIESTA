@@ -9,7 +9,6 @@ description = ""
 authors = [
     {name = "Reyes-Lamothe Lab, McGill University", email = "jose.rasconperez@mail.mcgill.ca"}
 ]
-dynamic = ["version"]
 requires-python = ">= 3.11"
 dependencies=[
     "setuptools>=68.2.0",
@@ -26,4 +25,4 @@ dependencies=[
 ]
 
 [project.scripts]
-spam-cli = "SMF:SMol_FIESTA.BatchRun_Rebind:run_scripts"
+SMF = "SMol_FIESTA.BatchRun_Rebind:run_scripts"
