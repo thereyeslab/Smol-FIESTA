@@ -33,7 +33,7 @@ Since it is the first step of the pipline, the inputs are as in the master scrip
 Specifies paths, parameters, and module toggles ( check the `config.md` for details)
 2. TrackMate spots files
 Format: one CSV per cell per video.
-Each row corresponds to a detected spot. Must follow this naming convention: `*_Cell_*_spotsAll.csv` (ex: `VideoName_Cell_1_spotsAll.csv`)
+Each row corresponds to a detected spot. Must follow this naming convention: `*_Cell_*_spots.csv` (ex: `VideoName_Cell_1_spots.csv`)
 Typical columns include:
     | Column Name   | Description                              |
     |---------------|------------------------------------------|
@@ -65,7 +65,7 @@ Under `[toggle]`
 
 **Outputs**
 1. tracks.csv:
-File: {csv_path}/{output_folder_name}/tracks.csv
+File: {csv_path}/{output_folder_name}/Intermidiates/tracks.csv
 A cleaned and annotated DataFrame where each row represents a spot in a valid track, with columns:
 Video #, Video Name, Cell, Track, Frame, x, y, Intensity
 
@@ -98,7 +98,7 @@ This script analyzes parsed tracks to determine the binding behavior of particle
 
 **Inputs**
 tracks.csv that is outputed from the `track_sorting.py`
-{csv_path}/{output_folder_name}/tracks.csv
+{csv_path}/{output_folder_name}/Intermidiates/tracks.csv
 
 **Parameters**
 | **Parameter**               | **Description**                                                                                                     |
@@ -107,10 +107,10 @@ tracks.csv that is outputed from the `track_sorting.py`
 | `distance_threshold_strict` | Stricter distance threshold (in pixels) for two spots to be considered **strictly bound** (`StrictBound = 1`).      |
 
 **Outputs**
-format: {csv_path}/{output_folder_name}/bound_decisions.csv
+format: {csv_path}/{output_folder_name}/Intermidiates/bound_decisions.csv
 
 bound_decisions.csv
-Original spot data with the following coloumns added: 
+Original spot data with the following columns added: 
 | **Column Name**        | **Type** | **Description**                                                                          |
 | ---------------------- | -------- | ---------------------------------------------------------------------------------------- |
 | `RelaxedBound`         | Integer  | 1 if constrained diffusion under the relaxed threshold, else 0                           |
@@ -123,11 +123,10 @@ This script further refines track behavior interpretation by
 - interpolating the gap behavior based on neighboring events and their durations.
 - introducing conditional filtering by overall binding event probability.
 
-It also prepares the track data for SMAUG program analysis of diffusion coefficients.
 
 **Input**: 
 bound_decisions.csv outputted from the bound_classification.py
-Format: {csv_path}/{output_folder_name}/bound_decisions.csv
+Format: {csv_path}/{output_folder_name}/Intermidiates/bound_decisions.csv
 
 **Parameters**
 | **Parameter**          | **Type** | **Description**                                                                       |
@@ -148,8 +147,8 @@ Conditional Parameters (used for advanced filtering)
 | `Ratio_turnover_all` |     |                                   |
 
 **Ouputs**
- `gaps-and-fixes_decisions.csv` in the {csv_path}/{output_folder_name}/gaps-and-fixes_decisions.csv
-Contains the original spot data with the added coloumns bellow:
+ `gaps-and-fixes_decisions.csv` in the {csv_path}/{output_folder_name}/Intermidiates/gaps-and-fixes_decisions.csv
+Contains the original spot data with the added columns below:
 | **Column Name** | **Description**                                                                                    |
 | --------------- | -------------------------------------------------------------------------------------------------- |
 | `isGap`         | 1 if this frame is a gap (interpolated, not an observed spot); otherwise 0.                        |
@@ -162,23 +161,14 @@ Contains the original spot data with the added coloumns bellow:
 **Note**
 The Pass1, Pass2, and Pass3 columns store the intermediate behavior state at each relabeling pass. This provides traceability of how a spot's label evolved across steps.
 
-**SMAUG outputs**
-| **Output File**                                                     | **Description**                                              |
-| ------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `SMAUG_GAP-FIXED_SPOTS/unfiltered_spotsAll.csv`                     | All tracks formatted for SMAUG analysis.                     |
-| `SMAUG_GAP-FIXED_SPOTS/separated_spotsDiffusing.csv`                | Subset of tracks primarily classified as free diffusing.     |
-| `SMAUG_GAP-FIXED_SPOTS/separated_spotsConstricted.csv`              | Subset of tracks classified as constrained diffusion.        |
-| `SMAUG_GAP-FIXED_SPOTS/separated_spotsBound.csv`                    | Subset of tracks classified as strictly bound.               |
-| `filtered_passed_spotsAll.csv` *(if `filter_by_binding_prop=True`)* | Tracks retained after filtering based on binding proportion. |
-| `filtered_failed_spotsAll.csv` *(if `filter_by_binding_prop=True`)* | Tracks removed during binding proportion-based filtering.    |
 
 # rebind_analysis.py
 This script identifies and characterizes rebinding events in single-molecule tracks. It analyzes the dynamics of particles transitioning from bound states to free states and back to binding. It also evaluates whether the rebindings occur to the same molecular site or to different ones, based on spatial displacement.
 
 **input**
 One of the following files (based on the use_gap_fixed flag):
-        {csv_path}/{output_folder_name}/gaps-and-fixes_decisions.csv --> outputted from `Gaps_and_fixes.py`
-        {csv_path}/{output_folder_name}/bound_decisions.csv --> outputted from `bound_classification.py`
+        {csv_path}/{output_folder_name}/Intermidiates/gaps-and-fixes_decisions.csv --> outputted from `Gaps_and_fixes.py`
+        {csv_path}/{output_folder_name}/Intermidiates/bound_decisions.csv --> outputted from `bound_classification.py`
         
 **Parameters**
 | Parameter                       | Description                                                                              |
@@ -258,7 +248,7 @@ Records transitions between binding events within tracks under strict criteria.
 
 3. `rebind-strict-boundtime.csv`
 The durations for each "binding event" within the track identified under strict criteria. 
-Note: an event is a subset of a track with the consistent binding behavior. 
+Note: An event is a subset of a track with a consistent binding behavior. 
 columns include: [Video #,	Cell,	Track,	Event (binding),	Bound Time]
 
 4. `rebind-flanked-strict-boundtime.csv`
@@ -269,14 +259,8 @@ columns include: [Video #,	Cell,	Track,	Event (flanked binding),	Bound Time]
 all diffusion (fast + constrained) event durations.
 columns include: [Video #,	Cell,	Track,	Event (diffusive (FD, CD),	Diffusion Time]
 6. `rebind-strict-rebindingtime.csv`
-The duration of each rebinding event within the track. ( the rebinding time is the diffusion time between two binding events) 
-columns include: [Video #,	Cell,	Track,	Event (diffusin between two binding),	Rebinding Time]
-
-Outputs of rebinding events as Trackmate *.csv format for other tools like SMAUG.
-7. `SMAUG_REBINDING_SPOTS/strict_rebinds_spotsRebind.csv`:	All spots involved in valid strict rebinding events.
-8. `SMAUG_REBINDING_SPOTS/strict_rebinds_spotsSame.csv`:	Spots from rebinding events classified as returning to the same location.
-9. `SMAUG_REBINDING_SPOTS/strict_rebinds_spotsDiff.csv`:	Spots from rebinding events classified as different-site rebindings.
-10. `SMAUG_REBINDING_SPOTS/strict_rebinds_spotsAll.csv`:	All relevant spots (same + different rebindings), formatted for SMAUG.
+The duration of each rebinding event within the track. (The rebinding time is the diffusion time between two binding events) 
+columns include: [Video #,	Cell,	Track,	Event (diffusion between two binding),	Rebinding Time]
 
 # Visualizer.py
 Runnable Script if run as __main__
@@ -298,9 +282,9 @@ One of the following files (based on the use_gap_fixed flag):
 Whether to use output from gaps_and_fixes.py (True) or bound_classification.py (False).
 
 **Visualizer-specific** (under [visualizer] in config):
-`spot_diameter` : Diameter (in pixels) of drawn molecular spots.
+`spot_diameter`: Diameter (in pixels) of drawn molecular spots.
 
-`tail_effect_enabled` : If True, diffusing molecules (classes 0 and 1) will have a motion blur tail indicating their path.
+`tail_effect_enabled`: If True, diffusing molecules (classes 0 and 1) will have a motion blur tail indicating their path.
 
 
 
@@ -332,7 +316,7 @@ One of the following files (based on the use_gap_fixed flag):
 | Parameter           | Description                                         |
 |---------------------|-----------------------------------------------------|
 | `pixel_size_um`     | Converts pixel coordinates to microns               |
-| `time_interval_ms`  | Time between frames in mili seconds                                |
+| `time_interval_ms`  | Time between frames in milliseconds                                |
 | `use_brownian_only` | If true, force α = 1 (pure Brownian motion)         |
 
 **in Script**
@@ -356,7 +340,7 @@ One of the following files (based on the use_gap_fixed flag):
 | `min_fdiffusion`     | 0.001   | Min free diffusion              |
 
 **Outputs**
-1. `Diffusion_Coefficient_Calculation.csv` in {csv_path}/{output_folder_name}/Diffusion_Coefficient_Calculation.csv
+1. `Diffusion_Coefficient_Calculation.csv` in {csv_path}/{output_folder_name}/Intermidiates/Diffusion_Coefficient_Calculation.csv
 
 | Column Name              | Description                                                                 |
 |--------------------------|-----------------------------------------------------------------------------|
