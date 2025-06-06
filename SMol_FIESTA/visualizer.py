@@ -204,7 +204,7 @@ def main(config_path: str = None):
     masks = natsorted(get_file_names_with_ext(mask_path, 'png'))
     outlines = natsorted(get_file_names_with_ext(mask_path, 'txt'))
     input_file = 'gaps-and-fixes_decisions.csv' if use_gap_fixes else 'bound_decisions.csv'
-    tracks_df = pd.read_csv(os.path.join(data_dir, input_file))
+    tracks_df = pd.read_csv(os.path.join(data_dir, 'intermidiates', input_file))
 
     headers = tracks_df[['Video #', 'Cell', 'Track']].to_numpy()
     sliced = slice_tracks(tracks_df, headers)

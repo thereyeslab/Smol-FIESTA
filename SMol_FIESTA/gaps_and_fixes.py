@@ -3,17 +3,13 @@ Runnable Script if run as __main__
 Further refining track behavior interpretation by interpolating the gap behavior.
 - Determine gap behavior by temporal neighboring events, gap length and event lengths.
 - Introduce conditional filtering by overall binding event probability.
-- Translate tracks into SMAUG format for evaluation of diffusion coefficients.
 
 Input:
     {csv_path}/{output_folder_name}/bound_decisions.csv
 
 Output:
     {csv_path}/{output_folder_name}/gaps-and-fixes_decisions.csv
-    {csv_path}/{output_folder_name}/SMAUG_GAP-FIXED_SPOTS/unfiltered_spotsAll.csv
-    {csv_path}/{output_folder_name}/SMAUG_GAP-FIXED_SPOTS/separated_spotsDiffusing.csv
-    {csv_path}/{output_folder_name}/SMAUG_GAP-FIXED_SPOTS/separated_spotsConstricted.csv
-    {csv_path}/{output_folder_name}/SMAUG_GAP-FIXED_SPOTS/separated_spotsBound.csv
+
 
     IF filter_by_binding_prop:
         {csv_path}/{output_folder_name}/filtered_passed_spotsAll.csv
@@ -81,15 +77,9 @@ def main(config_path:str = None):
         raise ValueError('Directory do not exist, please run track_sorting.py first.')
     logging_setup(output_path, 'gaps-and-fixes')
 
-    smaug_path = str(os.path.join(output_path, 'SMAUG_GAP-FIXED_SPOTS'))
-    try:
-        shutil.rmtree(smaug_path)
-        os.mkdir(smaug_path)
-    except:
-        os.mkdir(smaug_path)
 
-    print_log('Reading from csv:', str(os.path.join(output_path, 'bound_decisions.csv')))
-    tracks = pd.read_csv(str(os.path.join(output_path, 'bound_decisions.csv')))
+    print_log('Reading from csv:', str(os.path.join(output_path, 'Intermidiates', 'bound_decisions.csv')))
+    tracks = pd.read_csv(str(os.path.join(output_path, 'intermidiates', 'bound_decisions.csv')))
     tracks = tracks.loc[:, ~tracks.columns.str.contains('^Unnamed')]
 
     headers = tracks[['Video #', 'Cell', 'Track']].to_numpy()
@@ -104,13 +94,6 @@ def main(config_path:str = None):
     counts_filtered_onlyBound = 0
     output_tracks = []
     frames_filtered_onlyBound =0
-    # SMAUG outputs
-    smaug_filtered_pass = []
-    smaug_filtered_fail = []
-    smaug_unfiltered = []
-    smaug_filtered_strict = []
-    smaug_filtered_cd = []
-    smaug_filtered_dif = []
 
     for i in range(len(tracks)):
         track = tracks[i]
@@ -167,8 +150,6 @@ def main(config_path:str = None):
         track3 = events_to_track(events3)
 
         # Filter by binding proportion, weighted
-        smaug_all = track_to_smaug(track3, pos)
-        smaug_unfiltered.append(smaug_all)
         if filter_by_binding_prop:
             prop_binding = prop_counting(track3, (1.0, 1.0))  # weights (constricted, strict), for min  #track1 w0
             prop_binding_only_strict = prop_counting(track3, (0, 1.0), False)  # weights for max
@@ -181,7 +162,7 @@ def main(config_path:str = None):
                 print_log('\t\t: FAIL by minimum proportion binding')
                 frames_filtered += len(track1)
                 counts_filtered += 1
-                smaug_filtered_fail.append(smaug_all)
+
                 continue
             elif(prop_binding_only_strict > max_prop_binding):
                 print_log('\t\t: FAIL by maximum proportion binding')
@@ -190,11 +171,7 @@ def main(config_path:str = None):
                 continue
             else:
                 print_log('\t\t: PASS')
-                smaug_filtered_pass.append(smaug_all)
 
-        smaug_filtered_dif += event_to_smaug(events3, pos, 0)
-        smaug_filtered_cd += event_to_smaug(events3, pos, 1)
-        smaug_filtered_strict += event_to_smaug(events3, pos, 2)
 
         trackdf = pd.DataFrame(np.array(track3)[:, :5], columns=['Video #', 'Cell', 'Track', 'Frame', 'Intensity'])
         trackdf = (trackdf.assign(GapFixed=np.array(track)[:, 8],
@@ -216,16 +193,8 @@ def main(config_path:str = None):
               '\n\t-> Fraction Filtered from total:', frames_filtered_onlyBound / frames_total,
               )
 
-    print_log('Saving to:', str(os.path.join(output_path, 'gaps-and-fixes_decisions.csv')))
-    pd.concat(output_tracks).to_csv(str(os.path.join(output_path, 'gaps-and-fixes_decisions.csv')))
-    print_log('Saving to:', smaug_path, '(SMAUG files)')
-    csv_write(str(os.path.join(smaug_path, 'unfiltered_spotsAll.csv')), smaug_format(smaug_unfiltered))
-    if filter_by_binding_prop:
-        csv_write(str(os.path.join(smaug_path, 'filtered_passed_spotsAll.csv')), smaug_format(smaug_filtered_pass))
-        csv_write(str(os.path.join(smaug_path, 'filtered_failed_spotsAll.csv')), smaug_format(smaug_filtered_fail))
-    csv_write(str(os.path.join(smaug_path, 'separated_spotsDiffusing.csv')), smaug_format(smaug_filtered_dif))
-    csv_write(str(os.path.join(smaug_path, 'separated_spotsConstricted.csv')), smaug_format(smaug_filtered_cd))
-    csv_write(str(os.path.join(smaug_path, 'separated_spotsBound.csv')), smaug_format(smaug_filtered_strict))
+    print_log('Saving to:', str(os.path.join(output_path, 'intermidiates', 'gaps-and-fixes_decisions.csv')))
+    pd.concat(output_tracks).to_csv(str(os.path.join(output_path, 'intermidiates', 'gaps-and-fixes_decisions.csv')))
 
     return
 
@@ -336,45 +305,6 @@ def pass_events(events, ori, sub, min_time):
 HELPER FUNCTIONS
 ================================================================================================================
 '''
-# separate each track in SMAUG format
-def smaug_format(tracks):
-    formatted = []
-    for i in range(len(tracks)):
-        for spot in tracks[i]:
-            spot[0] = i + 1
-            formatted.append(spot)
-    return formatted
-
-# Event with specific behavior to smaug, gap excluded
-def event_to_smaug(events, pos, behavior):
-    smaugs = []
-    i = 0
-    for b, event in events:
-        if b == behavior:
-            smaug = []
-            for k in range(len(event)):
-                spot = event[k]
-                p = pos[i]
-                i += 1
-                if p[0] == -1 or p[1] == -1:
-                    continue
-                smaug.append([-1, spot[3], p[0], p[1], 10000])
-            smaugs.append(smaug)
-        else:
-            i += len(event)
-    return smaugs
-
-# Entire Track to SMAUG format
-# Track number, Frame, x, y, Intensity(10k) -> skip -1
-def track_to_smaug(track, pos):
-    smaug = []
-    for i in range(len(track)):
-        spot = track[i]
-        p = pos[i]
-        if p[0] == -1 or p[1] == -1:
-            continue
-        smaug.append([-1, spot[3], p[0], p[1], 10000])
-    return smaug
 
 # Proportion calculation, weighted by behavior
 def prop_counting(track, weights, countGaps=True):
@@ -469,9 +399,9 @@ START
 
 # Setup Logging
 def logging_setup(path:str, script_name:str):
-    log_file = str(os.path.join(path, 'LOG_' + script_name + '.txt'))
+    log_file = str(os.path.join(path, 'logs', 'LOG_' + script_name + '.txt'))
     log_targets = [logging.FileHandler(log_file)]
-    logging.basicConfig(format='%(message)s', level=logging.INFO, handlers=log_targets)
+    logging.basicConfig(format='%(message)s', level=logging.INFO, handlers=log_targets, force=True)
     logging.StreamHandler.terminator = ''
     open(log_file, 'w').close()
     os.system('cls' if os.name == 'nt' else 'clear')

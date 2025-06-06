@@ -441,9 +441,9 @@ START
 
 # Setup Logging
 def logging_setup(path:str, script_name:str):
-    log_file = str(os.path.join(path, 'LOG_' + script_name + '.txt'))
+    log_file = str(os.path.join(path, 'logs', 'LOG_' + script_name + '.txt'))
     log_targets = [logging.FileHandler(log_file)]
-    logging.basicConfig(format='%(message)s', level=logging.INFO, handlers=log_targets)
+    logging.basicConfig(format='%(message)s', level=logging.INFO, handlers=log_targets, force=True)
     logging.StreamHandler.terminator = ''
     open(log_file, 'w').close()
     os.system('cls' if os.name == 'nt' else 'clear')

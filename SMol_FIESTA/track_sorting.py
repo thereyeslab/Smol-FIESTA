@@ -173,9 +173,9 @@ def main(config_path:str = None):
                     final_list_track_spots.append(entry)
 
     # Output
-    print_log('Saving to csv:', str(os.path.join(output_path, 'tracks.csv')))
+    print_log('Saving to csv:', str(os.path.join(output_path, "Intermidiates", 'tracks.csv')))
     final_list_track_spots = pd.DataFrame(final_list_track_spots, columns=final_list_track_spots_columns)
-    final_list_track_spots.to_csv(str(os.path.join(output_path + '\\tracks.csv')))
+    final_list_track_spots.to_csv(str(os.path.join(output_path, "Intermidiates", 'tracks.csv')))
     return
 
 '''
@@ -496,9 +496,14 @@ START
 
 # Setup Logging
 def logging_setup(path:str, script_name:str):
-    log_file = str(os.path.join(path, 'LOG_' + script_name + '.txt'))
+    logs_dir = os.path.join(path, 'Logs')
+    Inter = os.path.join(path, 'Intermidiates')
+    os.makedirs(Inter, exist_ok=True)
+    os.makedirs(logs_dir, exist_ok=True)
+
+    log_file = str(os.path.join(logs_dir, 'LOG_' + script_name + '.txt'))
     log_targets = [logging.FileHandler(log_file)]
-    logging.basicConfig(format='%(message)s', level=logging.INFO, handlers=log_targets)
+    logging.basicConfig(format='%(message)s', level=logging.INFO, handlers=log_targets, force=True)
     logging.StreamHandler.terminator = ''
     open(log_file, 'w').close()
     os.system('cls' if os.name == 'nt' else 'clear')

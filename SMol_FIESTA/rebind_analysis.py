@@ -16,13 +16,8 @@ Output:
     {csv_path}/{output_folder_name}/RESULT_rebind.txt
     {csv_path}/{output_folder_name}/rebind-strict-event.csv
     {csv_path}/{output_folder_name}/rebind-strict-boundtime.csv
-    {csv_path}/{output_folder_name}/rebind-flanked-strict-boundtime.csv
     {csv_path}/{output_folder_name}/rebind-AllDiffusion-time.csv
     {csv_path}/{output_folder_name}/rebind-strict-rebindingtime.csv
-    {csv_path}/{output_folder_name}/SMAUG_REBINDING_SPOTS/strict_rebinds_spotsRebind.csv
-    {csv_path}/{output_folder_name}/SMAUG_REBINDING_SPOTS/strict_rebinds_spotsSame.csv
-    {csv_path}/{output_folder_name}/SMAUG_REBINDING_SPOTS/strict_rebinds_spotsDiff.csv
-    {csv_path}/{output_folder_name}/SMAUG_REBINDING_SPOTS/strict_rebinds_spotsAll.csv
 
 Parameters:
     rebind_distance_same: Determines rebinds to same particles if < parameter
@@ -87,14 +82,14 @@ def main(config_path:str = None):
     if isinstance(max_time_constrained, str): max_time_constrained = 100000
 
     output_path = str(os.path.join(csv_path, configs['path']['output_folder_name']))
-    log_file = str(os.path.join(output_path, 'LOG_rebind.txt'))
+    log_file = str(os.path.join(output_path, 'logs', 'LOG_rebind.txt'))
     log_result = str(os.path.join(output_path, 'RESULT_rebind.txt'))
     csv_result = str(os.path.join(output_path, 'RESULT_rebind.csv'))
     logging_setup(output_path, 'rebind')
     if not os.path.isdir(output_path):
         raise ValueError('Directory do not exist, please run track_sorting.py first.')
 
-    tracks = pd.read_csv(str(os.path.join(output_path, ('gaps-and-fixes_decisions.csv' if use_gap_fixed else 'bound_decisions.csv'))))
+    tracks = pd.read_csv(str(os.path.join(output_path, 'intermidiates', ('gaps-and-fixes_decisions.csv' if use_gap_fixed else 'bound_decisions.csv'))))
     tracks = tracks.loc[:, ~tracks.columns.str.contains('^Unnamed')]
 
     headers = tracks[['Video #', 'Cell', 'Track']].to_numpy()
@@ -110,7 +105,6 @@ def main(config_path:str = None):
     bound_constricted = []
     bound_constricted_record = []
 
-    bound_flanked_relaxed_record = []
 
     rebind_relaxed_spots_entiretrack = []
 
@@ -122,8 +116,7 @@ def main(config_path:str = None):
     rebind_strict_unsuccessful = 0
     bound_strict = []
     bound_strict_record = []
-
-    bound_flanked_strict_record = []
+    fastdiff_headers = []
 
     rebind_strict_spots_entiretrack = []
 
@@ -173,14 +166,6 @@ def main(config_path:str = None):
             rebind_relaxed_time_all.append(list(header.copy()) + [j, rbtime])
             j += 1
 
-        # Bound time calculations, now must be flanked by diffusions
-        _, __, ___, ____, _____, bd1 = (
-            rebind_record_proximity(track, rebind_distance_same, rebind_distance_diff, lambda x: not x > 0,
-                                    min_time_bound_constricted, max_time_rebinding))
-        j = 1
-        for bdtime in bd1:
-            bound_flanked_relaxed_record.append(list(header.copy()) + [j, bdtime])
-            j += 1
 
         # Strict
         rb, rb_us, rb_same, rb_diff, rb_all, time_all = (
@@ -216,14 +201,6 @@ def main(config_path:str = None):
         abound_dest = np.add(abound_dest, bf_counts)
         ########
 
-        # Bound time calculations, now must be flanked by diffusions
-        _, __, ___, ____, _____, bd1 = (
-            rebind_record_proximity(track, rebind_distance_same, rebind_distance_diff, lambda x: not x > 1,
-                                    min_time_bound_strict, max_time_rebinding))
-        j = 1
-        for bdtime in bd1:
-            bound_flanked_strict_record.append(list(header.copy()) + [j, bdtime])
-            j += 1
 
         # constrained diffusion
         constrained_dest = np.add(constrained_dest, constrained_record(track, min_time_bound_constricted, min_time_bound_strict, max_time_constrained))
@@ -231,6 +208,11 @@ def main(config_path:str = None):
         # fast diffusion
         df_time, df_counts = diffusion_record(track, lambda x: x > 0, min_time_diffusion, min_time_diffusion_subsequent)
         fast_diffusion_time += df_time
+
+        for ft in df_time:
+            fastdiff_headers.append(list(header.copy()) + [j, ft])
+            j += 1
+
         fast_diffusion_dest = np.add(fast_diffusion_dest, df_counts)
         if len(bd) > 0:
             fast_diffusion_dest_strict = np.add(fast_diffusion_dest_strict, df_counts)
@@ -256,152 +238,76 @@ def main(config_path:str = None):
     print_log('[Analysis]')
 
     # binding events output
-    print_log('__________Bound__________')
-    output_result.append('Bound')
+    print_log('_______________________________Event Mean Time_______________________________')
+    stats_strict      = pd.Series(bound_strict).describe()
+    stats_constrained = pd.Series(bound_constricted).describe()
+    stats_fast        = pd.Series(fast_diffusion_time).describe()
+    stats_search      = pd.Series(all_diffusion_time).describe()
+    stats_rebind      = pd.Series([x[4] for x in rebind_strict_time_all]).describe()
 
-    print_log('Constrained Diffusion Time (Frame):')
-    print_log('->', str(pd.Series(bound_constricted).describe()).replace('\n','\n-> '),'\n')
-    output_result.append(
-        'Constrained Diffusion Time (Frame),' + ','.join(str(pd.Series(bound_constricted).describe()).split()[:-2]))
-    print_log('Strict Bound Time (Frame):')
-    print_log('->', str(pd.Series(bound_strict).describe()).replace('\n','\n-> '), '\n')
-    output_result.append(
-        'Strict Bound Time (Frame),' + ','.join(str(pd.Series(bound_strict).describe()).split()[:-2]))
+    summary_table = pd.DataFrame({
+        'Bound':      stats_strict,
+        'C. Diffusion':  stats_constrained,
+        'Fast Diffusion':         stats_fast,
+        'Diffusion Time':            stats_search,
+        'Rebind Time':            stats_rebind
+    })
 
-    print_log('\n______Bound_Flanked_______')
-    print_log('# Note: This is bound time flanked by diffusion.')
-    print_log('\nStrict Bound time:')
-    print_log('->', str(pd.Series([x[4] for x in bound_flanked_strict_record]).describe()).replace('\n', '\n-> '), '\n')
-    output_result.append(
-        'Flanked Bound Time (Frame),' + ','.join(str(pd.Series([x[4] for x in bound_flanked_strict_record]).describe()).split()[:-2]))
+    print_log(summary_table, '\n')
 
-    output_result.append('')
-
-    print_log('\nBound to diffusion by Frame')
-    print_log('-> Count of Bound to Bound:', abound_dest[0])
-    print_log('-> Count of Bound to Diffusion:', abound_dest[1])
-
-    if abound_dest[1] == 0 or abound_dest[0] == 0:
-        op = 0
+    # Determine which legend to use based on max_time_rebinding
+    if max_time_rebinding < 1000000:
+        print_log(f"Rebinding probability after {max_time_rebinding} frames:")
     else:
-        op = float(abound_dest[1]) / float(abound_dest[0] + abound_dest[1])
+        print_log("Probability of Successful Binding:")
 
-    print_log('-> Probability of Bound to diffusion:', op)
-    output_result.append(
-        'Bound Transitions (by Frame),B->B,' + str(abound_dest[0]) + ',B->D,' + str(abound_dest[1]) + ',P(B->D),' + str(op))
-
-    output_result.append('')
-
-    # rebinding events output
-    print_log('__________Rebind_________')
-    output_result.append('Rebind')
-
-    print_log('\n Strict bindings Rebind Time (Frame):')
-    print_log('->', str(pd.Series([x[4] for x in rebind_strict_time_all]).describe()).replace('\n', '\n-> '), '\n')
-    output_result.append(
-        'Strict Bindings Rebind Time (Frame),' + ','.join(str(pd.Series([x[4] for x in rebind_strict_time_all]).describe()).split()[:-2]))
-
-    print_log('Strict bindings Rebind Probability:')
-    print_log('-> Successful:', len(rebind_strict))
-    print_log('-> Unsuccessful:', rebind_strict_unsuccessful)
+    print_log("-> Successful:", len(rebind_strict))
+    print_log("-> Unsuccessful:", rebind_strict_unsuccessful)
 
     if len(rebind_strict) == 0 or rebind_strict_unsuccessful == 0:
         op1 = 0
     else:
-        op1 = float(len(rebind_strict)) / float(len(rebind_strict) + rebind_strict_unsuccessful)
+        op1 = float(len(rebind_strict)) / (len(rebind_strict) + rebind_strict_unsuccessful)
 
-    print_log('-> Probability', op1, '\n' )
+    print_log("-> Probability", op1, "\n")
+
     output_result.append(
         'Rebinding (Events),Success,' + str(len(rebind_strict)) + ',Fail,' +
         str(rebind_strict_unsuccessful) + ',P(Success),' + str(op1))
 
     output_result.append('')
 
-    # constrained diffusion output
-    print_log('_______Constrained________')
-    output_result.append('Constrained')
+    # All events count by frame output (handles zero‐event cases)
+    total_frames = np.sum(proportion_count)
 
-    print_log('Count of Constrained to Diffusion:', constrained_dest[0])
-    print_log('Count of Constrained to Bound:', constrained_dest[1])
-    print_log('Probability of Constrained to Bound:', 0.000001+float(constrained_dest[1]) / 0.000001+(float(constrained_dest[0] + constrained_dest[1])))
-    print_log('')
-    output_result.append(
-        'Constrained Diffusion Transitions (by Events),->Diffusion,' + str(constrained_dest[0]) + ',->Bound,' +
-        str(constrained_dest[1]) + ',P(->Bound),' + str(0.0000001+(float(constrained_dest[1]))/0.000001 +(float(constrained_dest[0] + constrained_dest[1])+0.0000001)))
+    # Safely extract each count (in case the list is shorter than expected)
+    fast_count      = proportion_count[0] if len(proportion_count) > 0 else 0
+    constrained_count = proportion_count[1] if len(proportion_count) > 1 else 0
+    bound_count     = proportion_count[2] if len(proportion_count) > 2 else 0
 
-    output_result.append('')
-
-    # fast diffusion output
-    print_log('______Fast_Diffusion______')
-    output_result.append('Fast Diffusion')
-    print_log('\nFast Diffusion average time (Frame):')
-    print_log('->', str(pd.Series(fast_diffusion_time).describe()).replace('\n', '\n-> '), '\n')
-    output_result.append(
-        'Fast Diffusion Time (Frame),' + ','.join(str(pd.Series(fast_diffusion_time).describe()).split()[:-2]))
-
-    output_result.append('')
-
-    # All diffusion events output
-    print_log('______All_Diffusion_______')
-    output_result.append('All Diffusion (Fast and Constrained)')
-    print_log('All Diffusion by Frame')
-    print_log('-> Count of Diffusion to Diffusion:', all_diffusion_dest[0])
-    print_log('-> Count of Diffusion to Bound:', all_diffusion_dest[1])
-    print_log('-> Probability of Diffusion to Bound:',
-              float(all_diffusion_dest[1]) / (float(all_diffusion_dest[0] + all_diffusion_dest[1]))+.000000001)
-    output_result.append(
-        'Diffusion(All) Transitions (by Frame),->Diffusion,' + str(all_diffusion_dest[0]) + ',->Bound,' +
-        str(all_diffusion_dest[1]) + ',P(->Bound),' +
-        str(float(all_diffusion_dest[1]) / float(all_diffusion_dest[0] + all_diffusion_dest[1])))
-
-    print_log('\nAll Diffusion (with strict binding event in track) by Frame')
-    print_log('-> Count of Diffusion to Diffusion:', all_diffusion_dest_strict[0])
-    print_log('-> Count of Diffusion to Bound:', all_diffusion_dest_strict[1])
-
-    if all_diffusion_dest_strict[0] == 0 or all_diffusion_dest_strict[1] == 0:
-        op2 = 0
+    # Compute proportions only if total_frames > 0, else default to 0.0
+    if total_frames > 0:
+        prop_fast       = float(fast_count) / total_frames
+        prop_constrained = float(constrained_count) / total_frames
+        prop_bound      = float(bound_count) / total_frames
     else:
-        op2 = float(all_diffusion_dest_strict[1]) / (float(all_diffusion_dest_strict[0] + all_diffusion_dest_strict[1])+0.000000001)
+        prop_fast = prop_constrained = prop_bound = 0.0
 
-    print_log('-> Probability of Diffusion to Bound:', op2)
-    output_result.append(
-        'Diffusion(with strict binding event in track) Transitions (by Frame),->Diffusion,' +
-        str(all_diffusion_dest_strict[0]) + ',->Bound,' +
-        str(all_diffusion_dest_strict[1]) + ',P(->Bound),' +
-        str(op2))
+    # Build a DataFrame for printing
+    df_counts = pd.DataFrame({
+        'Event': [ 'F. Diffusion', 'C. Diffusion', 'Bound'],
+        'Count': [ fast_count, constrained_count, bound_count],
+        'Proportion': [ prop_fast, prop_constrained, prop_bound]
+    })
 
-    print_log('\nAll Diffusion average time (Frame):')
-    print_log('->', str(pd.Series(all_diffusion_time).describe()).replace('\n', '\n-> '), '\n')
-    output_result.append(
-        'Diffusion(All) Time (Frame),' + ','.join(str(pd.Series(all_diffusion_time).describe()).split()[:-2]))
+    print_log('_______Event proportions_______')
+    print_log(df_counts.to_string(index=False), '\n')
 
-    output_result.append('')
-
-    # All events count by frame output
-    print_log('____Counted_All_Events____')
+    # If you append to output_result, use the same safe proportions:
     output_result.append('All Events')
-
-    print_log('Count of all frames:', np.sum(proportion_count))
-    output_result.append('All (Frame),count,' + str(np.sum(proportion_count)))
-
-    print_log('Count of fast diffusion: ', proportion_count[0], '-> Proportion:',
-              float(proportion_count[0]) / np.sum(proportion_count))
-    output_result.append('Fast Diffusion (Frame),count,' + str(proportion_count[0]) +
-                         ',proportion,' + str(float(proportion_count[0]) / np.sum(proportion_count)))
-
-    print_log('Count of constrained diffusion: ', proportion_count[1], '-> Proportion:',
-              float(proportion_count[1]) / np.sum(proportion_count))
-    output_result.append('Constrained Diffusion (Frame),count,' + str(proportion_count[1]) +
-                         ',proportion,' + str(float(proportion_count[1]) / np.sum(proportion_count)))
-
-    if proportion_count[2] == 0:
-        op3 = 0
-    else:
-        op3 = float((proportion_count[2]) / np.sum(proportion_count))
-
-    print_log('Count of strict binding: ', proportion_count[2], '-> Proportion:', op3)
-    output_result.append('Bound (Frame),count,' + str(proportion_count[2]) +
-                         ',proportion,' + str(op3))
+    output_result.append(f'Fast Diffusion,count,{fast_count},proportion,{prop_fast}')
+    output_result.append(f'C. Diffusion,count,{constrained_count},proportion,{prop_constrained}')
+    output_result.append(f'Strict Binding,count,{bound_count},proportion,{prop_bound}')
 
     # output, truncate log_RESULT
     with open(log_file) as fin, open(log_result, 'w') as fout:
@@ -424,51 +330,129 @@ def main(config_path:str = None):
     rebind_strict_spots_diff = event_format_trackmate(rebind_strict_spots_diff)
     rebind_strict_spots_entiretrack = event_format_trackmate(rebind_strict_spots_entiretrack)
 
-    smaug_path = str(os.path.join(output_path, 'SMAUG_REBINDING_SPOTS'))
-    try:
-        shutil.rmtree(smaug_path)
-        os.mkdir(smaug_path)
-    except:
-        os.mkdir(smaug_path)
-    csv_write(str(os.path.join(smaug_path, 'strict_rebinds_spotsRebind.csv')), rebind_strict_spots_all)
-    csv_write(str(os.path.join(smaug_path, 'strict_rebinds_spotsSame.csv')), rebind_strict_spots_same)
-    csv_write(str(os.path.join(smaug_path, 'strict_rebinds_spotsDiff.csv')), rebind_strict_spots_diff)
-    csv_write(str(os.path.join(smaug_path, 'strict_rebinds_spotsAll.csv')), rebind_strict_spots_entiretrack)
-
-    rebind_columns = ['Video #', 'Cell', 'Track', 'From', 'To', 'Time', 'Speed', 'Distance', 'x1', 'y1', 'x2', 'y2']
-    rebind_strict = pd.DataFrame(rebind_strict, columns=rebind_columns).astype({'Time': 'int'})
-    rebind_strict.to_csv(str(os.path.join(output_path, 'rebind-strict-event.csv')))
 
     boundtime_columns = ['Video #', 'Cell', 'Track', 'Event', 'Bound Time']
     bound_constricted_record = pd.DataFrame(bound_constricted_record, columns=boundtime_columns).astype({'Bound Time': 'int'})
     bound_strict_record = pd.DataFrame(bound_strict_record, columns=boundtime_columns).astype({'Bound Time': 'int'})
-    bound_constricted_record.to_csv(str(os.path.join(output_path, 'rebind-constrained-DiffusionTime.csv')))
-    bound_strict_record.to_csv(str(os.path.join(output_path, 'rebind-strict-boundtime.csv')))
-
-    bound_flanked_strict_record = pd.DataFrame(bound_flanked_strict_record, columns=boundtime_columns).astype({'Bound Time': 'int'})
-    bound_flanked_strict_record.to_csv(str(os.path.join(output_path, 'rebind-flanked-strict-boundtime.csv')))
 
     diftime_columns = ['Video #', 'Cell', 'Track', 'Event', 'Diffusion Time']
     diftime_record = pd.DataFrame(diftime_record, columns=diftime_columns).astype(
         {'Diffusion Time': 'int'})
-    diftime_record.to_csv(str(os.path.join(output_path, 'rebind-AllDiffusion-time.csv')))
 
     rbtime_columns = ['Video #', 'Cell', 'Track', 'Event', 'Rebinding Time']
     rbtime_strict_record = pd.DataFrame(rebind_strict_time_all, columns=rbtime_columns).astype(
         {'Rebinding Time': 'int'})
-    rbtime_strict_record.to_csv(str(os.path.join(output_path, 'rebind-strict-rebindingtime.csv')))
-    # Transition Matrix calculation
+    # ─── Merge all “time” tables into one CSV ──────────────────────────────
+    # 1) Constrained-Diffusion events:
+    df_constrained = bound_constricted_record.copy()
+    df_constrained = df_constrained.rename(columns={'Bound Time': 'time'})
+    df_constrained['type'] = 'C.Diffusion'
+
+    # 2) Strict-Bound events:
+    df_strict_bound = bound_strict_record.copy()
+    df_strict_bound = df_strict_bound.rename(columns={'Bound Time': 'time'})
+    df_strict_bound['type'] = 'Bound'
+
+    # 3) Fast-Diffusion events:
+    df_fast_diffusion = pd.DataFrame(
+        fastdiff_headers,
+        columns=['Video #', 'Cell', 'Track', 'Event', 'FastDiffusion Time']
+    ).astype({'FastDiffusion Time': 'int'})
+    df_fast_diffusion = df_fast_diffusion.rename(columns={'FastDiffusion Time': 'time'})
+    df_fast_diffusion['type'] = 'FastDiffusion'
+
+    # 4) All-Diffusion events:
+    df_all_diffusion = diftime_record.copy()
+    df_all_diffusion = df_all_diffusion.rename(columns={'Diffusion Time': 'time'})
+    df_all_diffusion['type'] = 'SearchTime'
+
+    # 5) Strict-Rebinding events:
+    df_strict_rebind = rbtime_strict_record.copy()
+    df_strict_rebind = df_strict_rebind.rename(columns={'Rebinding Time': 'time'})
+    df_strict_rebind['type'] = 'Rebinding'
+
+    # 6) Concatenate all five DataFrames
+    combined = pd.concat(
+        [df_constrained, df_strict_bound, df_fast_diffusion, df_all_diffusion, df_strict_rebind],
+        ignore_index=True,
+        sort=False
+    )
+
+    # 7) Write the merged table to a single CSV
+    out_single_csv = os.path.join(output_path, 'rebind-Events.csv')
+    combined.to_csv(out_single_csv, index=False)
+    # ───────────────────────────────────────────────────────────────────────
+    # ─── Transition Matrix calculation (3×3) ──────────────────────────────────
     transition_matrices = calculate_transition_matrices(tracks)
 
-    # Save corrected CSV output
-    transition_csv = os.path.join(output_path, 'transition_matrices_counts_and_proportions.csv')
-    transition_matrices.to_csv(transition_csv)
+    # ─── Extract only the 3×3 proportions ───────────────────────────────────────
+    prop3x3 = transition_matrices['Proportions']
 
-    # Log updated matrices
-    print_log('Corrected transition matrices (frame-by-frame counts & proportions):')
-    print_log(f'\n{transition_matrices}')
+    # ─── Build the 2×2 “Diffusion vs Bound” proportions ────────────────────────
+    abs3x3 = transition_matrices['Absolute Counts']
+
+    from_diff_to_diff   = abs3x3.loc[['From_F.dif','From_C.Dif'], ['To_F.dif','To_C.Dif']].to_numpy().sum()
+    from_diff_to_bound  = abs3x3.loc[['From_F.dif','From_C.Dif'], 'To_Bound'].to_numpy().sum()
+    from_bound_to_diff  = abs3x3.loc['From_Bound', ['To_F.dif','To_C.Dif']].to_numpy().sum()
+    from_bound_to_bound = abs3x3.loc['From_Bound', 'To_Bound']
+
+    counts2x2 = pd.DataFrame(
+        [[from_diff_to_diff, from_diff_to_bound],
+         [from_bound_to_diff, from_bound_to_bound]],
+        index   = ['From Diffusion','From Bound'],
+        columns = ['To Diffusion','To Bound']
+    )
+
+    row_sums = counts2x2.sum(axis=1)
+    props2x2 = counts2x2.div(row_sums, axis=0).fillna(0)
+
+    # ─── Prepare side-by-side printing of 3×3 and 2×2 proportion tables ───────
+    str3x3 = prop3x3.to_string()
+    str2x2 = props2x2.to_string()
+
+    lines3 = str3x3.split('\n')
+    lines2 = str2x2.split('\n')
+
+    width3 = max(len(line) for line in lines3)
+    width2 = max(len(line) for line in lines2)
+    gap = '   '
+    max_lines = max(len(lines3), len(lines2))
+
+    lines3 += [' ' * width3] * (max_lines - len(lines3))
+    lines2 += [' ' * width2] * (max_lines - len(lines2))
+
+    combined = [lines3[i] + gap + lines2[i] for i in range(max_lines)]
+
+    # … (code that builds and prints the 3×3/2×2 side-by-side matrix) …
+
+    print_log('\n__Transition Matrix probabilities per Frame__\n')
+
+    # Print “3×3” heading above its three columns, and “2×2” above its two columns
+    title3 = '__________________3x3__________________'.center(width3)
+    title2 = '__________________2x2__________________'.center(width2)
+    print_log(f'{title3}{gap}{title2}')
+
+    for row in combined:
+        print_log(row)
+    print_log('\n')
+
+    # ─── Now write RESULT_rebind.txt (includes the transition-matrix block above) ───
+    with open(log_file) as fin, open(log_result, 'w') as fout:
+        active = False
+        for line in fin:
+            if '[Analysis]' in line:
+                active = True
+            if active:
+                fout.write(line)
+
+    # Also write the CSV‐style results
+    with open(csv_result, "w") as csv_file:
+        for line in output_result:
+            csv_file.write(line)
+            csv_file.write('\n')
 
     return
+
 
 '''
 ================================================================================================================
@@ -779,9 +763,9 @@ START
 
 # Setup Logging
 def logging_setup(path:str, script_name:str):
-    log_file = str(os.path.join(path, 'LOG_' + script_name + '.txt'))
+    log_file = str(os.path.join(path, 'logs', 'LOG_' + script_name + '.txt'))
     log_targets = [logging.FileHandler(log_file)]
-    logging.basicConfig(format='%(message)s', level=logging.INFO, handlers=log_targets)
+    logging.basicConfig(format='%(message)s', level=logging.INFO, handlers=log_targets, force=True)
     logging.StreamHandler.terminator = ''
     open(log_file, 'w').close()
     os.system('cls' if os.name == 'nt' else 'clear')
