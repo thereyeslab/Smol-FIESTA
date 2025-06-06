@@ -1,0 +1,2 @@
+[console_scripts]
+SMF = SMol_FIESTA.BatchRun_Rebind:run_scripts
