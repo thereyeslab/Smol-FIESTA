@@ -10,6 +10,7 @@ from SMol_FIESTA import gaps_and_fixes
 from SMol_FIESTA import rebind_analysis
 from SMol_FIESTA import rebind_MSD
 from SMol_FIESTA import rebind_fixed_particle
+from SMol_FIESTA import TwoExponential
 from natsort import natsorted
 import numpy as np
 from skimage import io as imgio
@@ -40,6 +41,8 @@ def run_scripts():
     except FileNotFoundError:
         print('Config file not found or invalid.')
         return
+    toggles = configs.get('toggle', {})
+
 
     # only checks the file structure
     if args.check_files:
@@ -86,23 +89,27 @@ def run_scripts():
         bound_classification.main(config_path)
         print("")
 
-        if configs['toggle']['use_gap_fixed']:
+        if toggles.get('use_gap_fixed', False):
             gaps_and_fixes.main(config_path)
             print("")
 
         rebind_analysis.main(config_path)
         print("")
 
-        if configs['toggle']['run_fixed_particle']:
+        if toggles.get('run_fixed_particle', False):
             rebind_fixed_particle.main(config_path)
             print("")
 
-        if configs['toggle']['run_visualizer']:
+        if toggles.get('run_visualizer', False):
             visualizer.main(config_path)
             print("")
 
-        if configs['toggle']['run_MSD_calculations']:
+        if toggles.get('run_MSD_calculations', False):
             rebind_MSD.main(config_path)
+            print("")
+
+        if toggles.get('two_exponential_analysis', False):
+            TwoExponential.main(config_path)
             print("")
     return
 
