@@ -55,31 +55,35 @@ def main(config_path:str = None):
         configs = tomllib.load(config_file)
 
     csv_path = configs['path']['csv_path']
-
-    # Some parameters
-    rebind_distance_same = configs['rebind-analysis'].get('rebind_distance_same', 'None')
-    rebind_distance_diff = configs['rebind-analysis'].get('rebind_distance_diff', 'None')
-    min_time_bound_strict = configs['rebind-analysis'].get('min_time_bound_strict', 'None')
-    min_time_bound_constricted = configs['rebind-analysis'].get('min_time_bound_constrained', 'None')
-    min_time_rebinding_relaxed = configs['rebind-analysis'].get('min_time_rebinding_relaxed', 'None')
-    min_time_rebinding_strict = configs['rebind-analysis'].get('min_time_rebinding_strict', 'None')
-    min_time_diffusion = configs['rebind-analysis'].get('min_time_diffusion', 'None')
-    min_time_diffusion_subsequent = configs['rebind-analysis'].get('min_time_diffusion_subsequent', 'None')
-    max_time_rebinding = configs['rebind-analysis'].get('max_time_rebinding', 'None')
-    max_time_constrained = configs['rebind-analysis'].get('max_time_constrained', 'None')
-
     use_gap_fixed = configs['toggle']['use_gap_fixed']
+    # config defaults
+    rebind_defaults = {
+        'rebind_distance_same': -1,
+        'rebind_distance_diff': 100000,
+        'min_time_bound_strict': 0,
+        'min_time_bound_constrained': 0,
+        'min_time_rebinding_relaxed': 0,
+        'min_time_rebinding_strict': 0,
+        'min_time_diffusion': 0,
+        'min_time_diffusion_subsequent': 1,
+        'max_time_rebinding': 1000000,
+        'max_time_constrained': 100000
+    }
 
-    if isinstance(rebind_distance_same, str): rebind_distance_same = -1
-    if isinstance(rebind_distance_diff, str): rebind_distance_diff = 100000
-    if isinstance(min_time_bound_strict, str): min_time_bound_strict = 0
-    if isinstance(min_time_bound_constricted, str): min_time_bound_constricted = 0
-    if isinstance(min_time_rebinding_relaxed, str): min_time_rebinding_relaxed = 0
-    if isinstance(min_time_rebinding_strict, str): min_time_rebinding_strict = 0
-    if isinstance(min_time_diffusion, str): min_time_diffusion = 0
-    if isinstance(min_time_diffusion_subsequent, str): min_time_diffusion_subsequent = 1
-    if isinstance(max_time_rebinding, str): max_time_rebinding = 1000000
-    if isinstance(max_time_constrained, str): max_time_constrained = 100000
+
+    rebind_cfg = {**rebind_defaults, **configs.get('rebind-analysis', {})}
+
+    # unpack configs
+    rebind_distance_same = rebind_cfg['rebind_distance_same']
+    rebind_distance_diff = rebind_cfg['rebind_distance_diff']
+    min_time_bound_strict = rebind_cfg['min_time_bound_strict']
+    min_time_bound_constricted = rebind_cfg['min_time_bound_constrained']
+    min_time_rebinding_relaxed = rebind_cfg['min_time_rebinding_relaxed']
+    min_time_rebinding_strict = rebind_cfg['min_time_rebinding_strict']
+    min_time_diffusion = rebind_cfg['min_time_diffusion']
+    min_time_diffusion_subsequent = rebind_cfg['min_time_diffusion_subsequent']
+    max_time_rebinding = rebind_cfg['max_time_rebinding']
+    max_time_constrained = rebind_cfg['max_time_constrained']
 
     output_path = str(os.path.join(csv_path, configs['path']['output_folder_name']))
     log_file = str(os.path.join(output_path, 'logs', 'LOG_rebind.txt'))
@@ -157,13 +161,19 @@ def main(config_path:str = None):
             rebind_relaxed_spots_all.append(rb_all)
         if(len(bd) > 0):
             bound_constricted += bd
+        segments_bound_strict      = extract_segments(track, target_label=2)
+        segments_bound_constricted = extract_segments(track, target_label=1)
+        segments_fast_diffusion    = extract_segments(track, target_label=0)
+        segments_all_diffusion     = extract_segments(track, target_label=3)  # or adjust as needed
+        segments_rebind_strict     = extract_segments_from_rebind(track, time_all)
+
+
+        # 2) Constrained-Diffusion events
         j = 1
-        for bdframe in bd:
-            bound_constricted_record.append(list(header.copy()) + [j, bdframe])
-            j += 1
-        j = 1
-        for rbtime in time_all:
-            rebind_relaxed_time_all.append(list(header.copy()) + [j, rbtime])
+        for segment in segments_bound_constricted:
+            start_frame = segment[0][0]
+            end_frame   = start_frame + len(segment) - 1
+            bound_constricted_record.append(list(header.copy()) + [j, start_frame, end_frame])
             j += 1
 
 
@@ -185,13 +195,20 @@ def main(config_path:str = None):
             rebind_strict_spots_all.append(rb_all)
         if(len(bd) > 0):
             bound_strict += bd
+        # 1) Strict-Bound events
         j = 1
-        for bdframe in bd:
-            bound_strict_record.append(list(header.copy()) + [j, bdframe])
+        for segment in segments_bound_strict:
+            start_frame = segment[0][0]
+            end_frame   = start_frame + len(segment) - 1
+            bound_strict_record.append(list(header.copy()) + [j, start_frame, end_frame])
             j += 1
+
+        # 3) Fast-Diffusion events
         j = 1
-        for rbtime in time_all:
-            rebind_strict_time_all.append(list(header.copy()) + [j, rbtime])
+        for segment in segments_fast_diffusion:
+            start_frame = segment[0][0]
+            end_frame   = start_frame + len(segment) - 1
+            fastdiff_headers.append(list(header.copy()) + [j, start_frame, end_frame])
             j += 1
 
         ########
@@ -224,10 +241,45 @@ def main(config_path:str = None):
         all_diffusion_dest = np.add(all_diffusion_dest, df_counts)
         if len(bd) > 0:
             all_diffusion_dest_strict = np.add(all_diffusion_dest_strict, df_counts)
-        j = 1
-        for dfframe in df_time:
-            diftime_record.append(list(header.copy()) + [j, dfframe])
-            j += 1
+        segments_all_diffusion = extract_segments(track, exclude_labels={1, 2})
+        # Rebinding: diffusion segments flanked by strict-bound (2)
+        j_rb = 1
+        f = 1
+        while f < len(track) - 1:
+            if track[f - 1][3] == 2 and track[f][3] in [0, 1]:
+                start_frame = track[f][0]
+                while f < len(track) and track[f][3] in [0, 1]:
+                    f += 1
+                if f < len(track) and track[f][3] == 2:
+                    end_frame = track[f - 1][0]  # last diffusion frame
+                    rebind_strict_time_all.append(list(header.copy()) + [j_rb, start_frame, end_frame])
+                    j_rb += 1
+            else:
+                f += 1
+
+        # SearchTime extraction (label 0 or 1, flanked by 2 or edges)
+
+        j_st = 1
+        in_segment = False
+        segment_start = None
+
+        for idx, spot in enumerate(track):
+            label = int(spot[3])
+            frame = int(spot[0])
+
+            if label in [0, 1]:
+                if not in_segment:
+                    in_segment = True
+                    segment_start = frame
+            elif label == 2 and in_segment:
+                # We were in a diffusion segment, now it ends
+                diftime_record.append(list(header.copy()) + [j_st, segment_start, track[idx - 1][0]])
+                j_st += 1
+                in_segment = False
+
+        # If the track ends while still in a diffusion segment
+        if in_segment:
+            diftime_record.append(list(header.copy()) + [j_st, segment_start, track[-1][0]])
 
         # proportion count
         p_counts = label_count(track)
@@ -330,48 +382,37 @@ def main(config_path:str = None):
     rebind_strict_spots_diff = event_format_trackmate(rebind_strict_spots_diff)
     rebind_strict_spots_entiretrack = event_format_trackmate(rebind_strict_spots_entiretrack)
 
+    boundtime_columns = ['Video #', 'Cell', 'Track', 'Event', 'StartFrame', 'EndFrame']
+    diftime_columns = ['Video #', 'Cell', 'Track', 'Event', 'StartFrame', 'EndFrame']
+    fastdiff_columns = ['Video #', 'Cell', 'Track', 'Event', 'StartFrame', 'EndFrame']
+    rbtime_columns = ['Video #', 'Cell', 'Track', 'Event', 'StartFrame', 'EndFrame']
 
-    boundtime_columns = ['Video #', 'Cell', 'Track', 'Event', 'Bound Time']
-    bound_constricted_record = pd.DataFrame(bound_constricted_record, columns=boundtime_columns).astype({'Bound Time': 'int'})
-    bound_strict_record = pd.DataFrame(bound_strict_record, columns=boundtime_columns).astype({'Bound Time': 'int'})
-
-    diftime_columns = ['Video #', 'Cell', 'Track', 'Event', 'Diffusion Time']
-    diftime_record = pd.DataFrame(diftime_record, columns=diftime_columns).astype(
-        {'Diffusion Time': 'int'})
-
-    rbtime_columns = ['Video #', 'Cell', 'Track', 'Event', 'Rebinding Time']
-    rbtime_strict_record = pd.DataFrame(rebind_strict_time_all, columns=rbtime_columns).astype(
-        {'Rebinding Time': 'int'})
-    # ─── Merge all “time” tables into one CSV ──────────────────────────────
-    # 1) Constrained-Diffusion events:
-    df_constrained = bound_constricted_record.copy()
-    df_constrained = df_constrained.rename(columns={'Bound Time': 'time'})
+    df_constrained = pd.DataFrame(bound_constricted_record, columns=boundtime_columns).astype({
+        'StartFrame': 'int', 'EndFrame': 'int'})
+    df_constrained['time'] = df_constrained['EndFrame'] - df_constrained['StartFrame'] + 1
     df_constrained['type'] = 'C.Diffusion'
 
-    # 2) Strict-Bound events:
-    df_strict_bound = bound_strict_record.copy()
-    df_strict_bound = df_strict_bound.rename(columns={'Bound Time': 'time'})
+    df_strict_bound = pd.DataFrame(bound_strict_record, columns=boundtime_columns).astype({
+        'StartFrame': 'int', 'EndFrame': 'int'})
+    df_strict_bound['time'] = df_strict_bound['EndFrame'] - df_strict_bound['StartFrame'] + 1
     df_strict_bound['type'] = 'Bound'
 
-    # 3) Fast-Diffusion events:
-    df_fast_diffusion = pd.DataFrame(
-        fastdiff_headers,
-        columns=['Video #', 'Cell', 'Track', 'Event', 'FastDiffusion Time']
-    ).astype({'FastDiffusion Time': 'int'})
-    df_fast_diffusion = df_fast_diffusion.rename(columns={'FastDiffusion Time': 'time'})
+    df_fast_diffusion = pd.DataFrame(fastdiff_headers, columns=fastdiff_columns)
+    df_fast_diffusion = df_fast_diffusion.dropna(subset=['StartFrame', 'EndFrame'])
+    df_fast_diffusion = df_fast_diffusion.astype({'StartFrame': 'int', 'EndFrame': 'int'})
+    df_fast_diffusion['time'] = df_fast_diffusion['EndFrame'] - df_fast_diffusion['StartFrame'] + 1
     df_fast_diffusion['type'] = 'FastDiffusion'
 
-    # 4) All-Diffusion events:
-    df_all_diffusion = diftime_record.copy()
-    df_all_diffusion = df_all_diffusion.rename(columns={'Diffusion Time': 'time'})
+    df_all_diffusion = pd.DataFrame(diftime_record, columns=diftime_columns).astype({
+        'StartFrame': 'int', 'EndFrame': 'int'})
+    df_all_diffusion['time'] = df_all_diffusion['EndFrame'] - df_all_diffusion['StartFrame'] + 1
     df_all_diffusion['type'] = 'SearchTime'
 
-    # 5) Strict-Rebinding events:
-    df_strict_rebind = rbtime_strict_record.copy()
-    df_strict_rebind = df_strict_rebind.rename(columns={'Rebinding Time': 'time'})
+    df_strict_rebind = pd.DataFrame(rebind_strict_time_all, columns=rbtime_columns).astype({
+        'StartFrame': 'int', 'EndFrame': 'int'})
+    df_strict_rebind['time'] = df_strict_rebind['EndFrame'] - df_strict_rebind['StartFrame'] + 1
     df_strict_rebind['type'] = 'Rebinding'
 
-    # 6) Concatenate all five DataFrames
     combined = pd.concat(
         [df_constrained, df_strict_bound, df_fast_diffusion, df_all_diffusion, df_strict_rebind],
         ignore_index=True,
@@ -653,6 +694,39 @@ def label_count(track):
     for i in range(unique.shape[0]):
         result[unique[i]] = counts[i]
     return result
+
+def extract_segments(track, target_label=None, exclude_labels=None):
+    segments = []
+    current = []
+    for spot in track:
+        label = int(spot[3])
+        if (target_label is not None and label == target_label) or \
+           (exclude_labels is not None and label not in exclude_labels):
+            current.append(spot)
+        elif current:
+            segments.append(current)
+            current = []
+    if current:
+        segments.append(current)
+    return segments
+
+
+def extract_segments_from_rebind(track, rebind_durations):
+    segments = []
+    i = 0
+    for duration in rebind_durations:
+        while i < len(track) and track[i][3] != 0:
+            i += 1
+        if i >= len(track):
+            break
+        segment = []
+        while i < len(track) and track[i][3] == 0 and len(segment) < duration:
+            segment.append(track[i])
+            i += 1
+        if len(segment) > 0:
+            segments.append(segment)
+    return segments
+
 
 # format each event to Trackmate format, but loses intensity information
 def event_format_trackmate(events):
