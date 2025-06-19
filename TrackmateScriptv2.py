@@ -26,89 +26,89 @@ import math
 import time
 import itertools as itto
 import shutil
+import ConfigParser as configparser  # Top of file already
 
 # Avoid errors with UTF8 chars generated in TrackMate that will mess with our Fiji Jython.
 reload(sys)
 
 
 def main():
-    """
-    Main function to set up directories, tracking parameters, and initiate the tracking process.
-    """
-    # Tracking directories and parameters
-    dir_tiff = r"D:\Microscopy\SMSNEW\_ANIMAL_CELL_DATA\Rif1\pablo\im\ImagesNoMetadata"
-    segmentation_enabled = True  # True if tracking single cells
-    dir_outline = r"D:\Microscopy\SMSNEW\_ANIMAL_CELL_DATA\Rif1\pablo\seg"  # Cellpose output (ImageJ-compatible outlines)
-    expansion_size = 0.0  # Expansion size for roi in pixels, can help tracking if cells are too small
-    roi_ids = 'all'  # Can be "all", a single ID, or a list of IDs
+    config_file = os.path.abspath(r"C:\Users\JpRas\OneDrive\Escritorio\Analysis_PIPELINE\new\Trackmate_configFile.txt")
+    link_parameters, paths, roi_params, settings, filters, config_path = load_config(config_file)
 
-    # List all TIFF files in the directory
-    files = []
-    for root, dirs, file_names in os.walk(dir_tiff):
-        files = [fi for fi in file_names if fi.endswith(".tif")]
-        print(files)
-
-    # Get corresponding outline files if segmentation is enabled
+    files = [f for f in os.listdir(paths['dir_tiff']) if f.endswith(".tif")]
     outlines = []
-    if segmentation_enabled:
-        for root, dirs, file_names in os.walk(dir_outline):
-            outlines = [fi for fi in file_names if fi.endswith(".txt")]
-        print(len(outlines), len(files))
-        if not (len(outlines) == len(files)):
-            print(files)
-            print(outlines)
-            print('File mismatch, aborted')
+
+    if paths['segmentation_enabled']:
+        outlines = [f for f in os.listdir(paths['dir_outline']) if f.endswith(".txt")]
+        if not len(outlines) == len(files):
+            print("File mismatch, aborted")
             return
     else:
-        outlines = ['' for fi in files]
+        outlines = ['' for _ in files]
 
-    # Create analysis directory using os.path.join for cross-platform compatibility
-    save_analysis_dir = os.path.join(dir_tiff, 'AnalysisSMolFiesta')
+    save_analysis_dir = os.path.join(paths['dir_tiff'], 'AnalysisSMolFiesta')
     os.mkdir(save_analysis_dir)
 
-    # Save a copy of the script to the analysis directory
-    script_path = sys.argv[0]
-    script_copy_path = os.path.join(save_analysis_dir, os.path.basename(script_path))
-    shutil.copy2(script_path, script_copy_path)
+    shutil.copy2(config_file, os.path.join(save_analysis_dir, "used_config.txt"))
 
-    # Define tracking parameters using a dictionary for clarity
-    link_parameters = {
-        'linking_max_distance': 10.0,
-        'gap_closing_max_distance': 4.0,
-        'splitting_max_distance': 0.0,
-        'merging_max_distance': 0.0,
-        'threshold': 10.0,
-        'alternative_linking_cost_factor': 1.05,
-        'files': sorted(files),
-        'save_analysis_dir': save_analysis_dir,
-        'analysis_suffix': '',
-        'detector_type': "Dog"
-    }
-    print(link_parameters['files'])
+    link_parameters['files'] = sorted(files)
+    link_parameters['save_analysis_dir'] = save_analysis_dir
 
-    # Choose which filter set to apply (change this value as desired)
-    # The filter set will be used in the original if–elif style below.
-    filter_set = 0
-
-    # Process each image file
-    for z in range(len(link_parameters['files'])):
-        imp = IJ.openImage(os.path.join(dir_tiff, link_parameters['files'][z]))
+    for z in range(len(files)):
+        imp = IJ.openImage(os.path.join(paths['dir_tiff'], files[z]))
         tracking(imp, link_parameters, z,
                  run_mode=1,
-                 radius=3.0,
-                 max_frame_gap=4,
-                 number_threads=16,
-                 filter_set=filter_set,
-                 segmentation_enabled=segmentation_enabled,
-                 outline_file=os.path.join(dir_outline, sorted(outlines)[z]),
-                 expansion_size=expansion_size,
-                 roi_ids=roi_ids)
-        imp.close()
+                 radius=settings['radius'],
+                 max_frame_gap=settings['max_frame_gap'],
+                 number_threads=settings['number_threads'],
+                 filter_set=filters,
+                 segmentation_enabled=paths['segmentation_enabled'],
+                 outline_file=os.path.join(paths['dir_outline'], sorted(outlines)[z]),
+                 expansion_size=roi_params['expansion_size'],
+                 roi_ids=roi_params['roi_ids'])
+                 
+def load_config(config_path):
+    config = configparser.ConfigParser()
+    config.read(config_path)
+
+    # Convert config sections
+    link_parameters = {
+        'linking_max_distance': config.getfloat('Tracking', 'linking_max_distance'),
+        'gap_closing_max_distance': config.getfloat('Tracking', 'gap_closing_max_distance'),
+        'splitting_max_distance': config.getfloat('Tracking', 'splitting_max_distance'),
+        'merging_max_distance': config.getfloat('Tracking', 'merging_max_distance'),
+        'threshold': config.getfloat('Detection', 'threshold'),
+        'alternative_linking_cost_factor': config.getfloat('Tracking', 'alternative_linking_cost_factor'),
+        'analysis_suffix': config.get('General', 'analysis_suffix'),
+        'detector_type': config.get('Detection', 'detector_type'),
+    }
+
+    paths = {
+        'dir_tiff': config.get('Paths', 'dir_tiff'),
+        'dir_outline': config.get('Paths', 'dir_outline'),
+        'segmentation_enabled': config.getboolean('Paths', 'segmentation_enabled'),
+    }
+
+    roi_params = {
+        'expansion_size': config.getfloat('ROI', 'expansion_size'),
+        'roi_ids': config.get('ROI', 'roi_ids'),
+    }
+
+    settings = {
+        'radius': config.getfloat('Settings', 'radius'),
+        'max_frame_gap': config.getint('Settings', 'max_frame_gap'),
+        'number_threads': config.getint('Settings', 'number_threads'),
+    }
+
+    filters = config.items('Filters') if config.has_section('Filters') else []
+
+    return link_parameters, paths, roi_params, settings, filters, config_path
 
 
 def tracking(imp, link_parameters, z, run_mode=0, radius=1.5, max_frame_gap=2,
              number_threads=4, filter_set=0, segmentation_enabled=False, outline_file='',
-             expansion_size=1.0, roi_ids='all'):
+             expansion_size=0.0, roi_ids='all'):
     """
     Performs tracking on the given image with specified parameters.
 
@@ -240,32 +240,26 @@ def configure(imp, link_parameters, radius, max_frame_gap, filter_set):
     settings.trackerSettings['SPLITTING_MAX_DISTANCE'] = link_parameters['splitting_max_distance']
     settings.trackerSettings['MERGING_MAX_DISTANCE'] = link_parameters['merging_max_distance']
     settings.trackerSettings['MAX_FRAME_GAP'] = max_frame_gap
-    settings.trackerSettings['ALLOW_TRACK_SPLITTING'] = True
-    settings.trackerSettings['ALLOW_TRACK_MERGING'] = True
+    settings.trackerSettings['ALLOW_TRACK_SPLITTING'] = False
+    settings.trackerSettings['ALLOW_TRACK_MERGING'] = False
     settings.trackerSettings['ALTERNATIVE_LINKING_COST_FACTOR'] = link_parameters['alternative_linking_cost_factor']
 
     # Add analyzers and an initial spot filter
     settings.addAllAnalyzers()
     settings.initialSpotFilterValue = 1.0
 
-    # Configure track filters based on filter_set.
-    # Note: In each FeatureFilter call, True means to keep tracks with feature values above the threshold.
-    if filter_set == 0:  # All
-        filter_inst = FeatureFilter('QUALITY', 16.0, True)
-        settings.addSpotFilter(filter_inst)
-        filter_inst = FeatureFilter('NUMBER_SPOTS', 4, True)
-        settings.addTrackFilter(filter_inst)
-        filter_inst = FeatureFilter('TRACK_DURATION', 1, True)
-        settings.addTrackFilter(filter_inst)
-    elif filter_set == 1:  # Bound
-        filter_inst = FeatureFilter('QUALITY', 2.5, True)
-        settings.addSpotFilter(filter_inst)
-        filter_inst = FeatureFilter('TRACK_DURATION', 2.5, True)
-        settings.addTrackFilter(filter_inst)
-        filter_inst = FeatureFilter('TRACK_MIN_SPEED', 1.5, False)
-        settings.addTrackFilter(filter_inst)
+    def parse_filter_string(filter_str):
+        parts = [x.strip() for x in filter_str.split(',')]
+        return FeatureFilter(parts[0], float(parts[1]), parts[2].lower() == 'true')
+
+    for name, val in filter_set:
+        if name.startswith('spot_filter'):
+            settings.addSpotFilter(parse_filter_string(val))
+        elif name.startswith('track_filter'):
+            settings.addTrackFilter(parse_filter_string(val))
 
     return model, settings
+
 
 
 def track_process(model, settings, imp, link_parameters, z, run_mode, filter_set,
@@ -309,8 +303,8 @@ def track_process(model, settings, imp, link_parameters, z, run_mode, filter_set
     ds = DisplaySettingsIO.readUserDefault()
 
     # Uncomment the following lines to display the viewer if needed.
-    # displayer = HyperStackDisplayer(model, sm, imp, ds)
-    # displayer.render()
+    displayer = HyperStackDisplayer(model, sm, imp, ds)
+    displayer.render()
 
     fm = model.getFeatureModel()
 
@@ -443,6 +437,8 @@ def track_process(model, settings, imp, link_parameters, z, run_mode, filter_set
         with open(spots_filename, "w") as f:
             writer = csv.writer(f, delimiter=',')
             writer.writerows(spt_all_fin_2)
+
+
         IJ.log('Success')
         return
 
@@ -477,6 +473,7 @@ def load_rois(file_name, imp, expansion_size, roi_ids):
             roi = RoiEnlarger.enlarge(roi, expansion_size)
             rm.addRoi(roi)
     return rm
+
 
 
 if __name__ == "__main__":

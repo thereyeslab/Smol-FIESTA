@@ -1,0 +1,32 @@
+[Paths]
+dir_tiff = C:\Users\JpRas\OneDrive\Escritorio\Analysis_PIPELINE\new\Test3\NoMetadata
+dir_outline = C:\Users\JpRas\OneDrive\Escritorio\Analysis_PIPELINE\new\Test3\segmented
+segmentation_enabled = True
+
+[Tracking]
+linking_max_distance = 20.0
+gap_closing_max_distance = 2.0
+splitting_max_distance = 2.0
+merging_max_distance = 2.0
+alternative_linking_cost_factor = 10.05
+
+[Detection]
+threshold = 2.0
+detector_type = Dog
+
+[General]
+analysis_suffix =
+
+[ROI]
+expansion_size = 0.0
+roi_ids = all
+
+[Settings]
+radius = 3.0
+max_frame_gap = 10
+number_threads = 16
+
+[Filters]
+spot_filter1 = QUALITY, 3.0, True
+track_filter1 = NUMBER_SPOTS, 4, True
+track_filter2 = TRACK_DURATION, 4, True
