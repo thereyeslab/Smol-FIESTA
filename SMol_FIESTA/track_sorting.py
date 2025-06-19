@@ -51,6 +51,7 @@ def main(config_path:str = None):
 
     csv_path = configs['path']['csv_path']
     mask_path = configs['path']['mask_path']
+    one_csv_per_cell = configs['path']['one_csv_per_cell']
 
     allowed_gap_max = configs['track-sorting'].get('allowed_gap_max', 'None')
     allowed_track_length_min = configs['track-sorting'].get('allowed_track_length_min', 'None')
@@ -86,25 +87,42 @@ def main(config_path:str = None):
 
     # config file save
     shutil.copy(config_path, str(os.path.join(output_path + 'script-config.toml')))
-
-    masks = natsorted(get_file_names_with_ext(mask_path, 'png'))
-    csv_sorted = csv_name_sort_suffix(csv_path, 'spots')
-    csv_keys = natsorted(list(csv_sorted.keys()))
-    print(len(csv_sorted.keys()), len(masks))
-    if not len(csv_sorted.keys()) == len(masks):
-        raise ValueError('Different number of Masks and Videos, you may have a video without tracks')
+    # getting the masks and csv files full paths
+    masks = natsorted(get_file_names_with_ext(mask_path, 'png')) # list of paths to masks
+    if one_csv_per_cell:
+        csv_sorted = csv_name_sort_suffix(csv_path, 'spots') # Dictionary where: Keys are video names (like "video1"),Values are lists of CSV file paths corresponding to that video (one CSV per cell).
+        csv_keys = natsorted(list(csv_sorted.keys())) # list of video names (like "video1")
+        if not len(csv_sorted.keys()) == len(masks):
+            raise ValueError('Different number of Masks and Videos, you may have a video without tracks')
+    else:
+        spot_csv_combined = natsorted([
+        os.path.join(csv_path, f) for f in os.listdir(csv_path)
+        if f.endswith('_spots.csv') and 'cell' not in f.lower()])
+        if not len(spot_csv_combined) == len(masks):
+            raise ValueError('Different number of Masks and Videos, you may have a video without tracks')
 
     for i in range(len(masks)):
         print_log('Processing:', masks[i])
         mask = np.swapaxes(imgio.imread(masks[i]), 0, 1)
         n_cell = np.max(mask)
-        spots_video = index_format(natsorted(csv_sorted[csv_keys[i]]), n_cell)
+        if one_csv_per_cell:
+            video_name = csv_keys[i]
+            spot_csv_paths = natsorted(csv_sorted[video_name])  # List of per-cell spot files
+            spots_video = index_format(spot_csv_paths, n_cell)  # list of "CSV file paths" for all cells in the video, sorted by cell index
+        else:
+            spot_csv_path = spot_csv_combined[i]  # one file per video
+            video_name = os.path.splitext(os.path.basename(spot_csv_path))[0].replace('_spots', '')
+            spots_video = parse_combined_spots_by_mask(mask, spot_csv_path, n_cell) # list of "spot data", each element is a "list" containing spot information for a cell in the current video (sorted by cell index)
 
         print_log('\t# Cells in Video:', len(spots_video))
         for j in range(n_cell):
             print_log('\t-> Cell', j, end='')
             try:
-                spots_cell, _ = parse_csv_by_mask(mask, spots_video[j], j + 1)
+                if one_csv_per_cell:
+                    spots_cell, _ = parse_csv_by_mask(mask, spots_video[j], j + 1) # list, spot data for the current cell in the current video
+                else:
+                    spots_cell = spots_video[j]  # list, spot data for the current cell in the current video
+                    _ = 0
             except Exception as e:
                 print_log(f"Error processing CSV file for cell {j}: {e}")
                 continue
@@ -118,7 +136,7 @@ def main(config_path:str = None):
                 print_log('\t\t [ ALL SPOTS ELIMINATED ]')
                 continue
 
-            tracks_cell = track_separation(spots_cell)
+            tracks_cell = track_separation(spots_cell) # list of tracks, each element is a list of spot information for that track
             print_log('\t\t: # Tracks in Cell:', len(tracks_cell))
 
             if bacteria_analysis:
@@ -165,7 +183,7 @@ def main(config_path:str = None):
             print_log('\t\t: # Splitting:', _, '# Filtered:', _1)
             print_log('\t\t: # Continuous, Individual Tracks:', len(tracks_ind))
 
-            info = [i + 1, csv_keys[i], j + 1]
+            info = [i + 1, video_name, j + 1]
             for k in range(len(tracks_ind)):
                 tracks_ind[k] = track_distance_tabulate(tracks_ind[k], dist_index, dist_none)
                 for spot in tracks_ind[k]:
@@ -451,6 +469,45 @@ def index_find(name):
         return int(info[i+1])
     else:
         raise ValueError('Track csv file name not formatted correctly: no cell index found.')
+
+def parse_combined_spots_by_mask(mask, csv_path, n_cells):
+    """
+    Parses a single spots CSV containing data for all cells in the video,
+    and assigns each spot to the correct cell using the mask.
+
+    Returns a list, list of "spot data", each element is a "list" containing spot information for a cell in the current video: [list of spots for cell 1, list of spots for cell 2, ..., list of spots for cell n].
+    Each spot is represented as a list: [track ID, frame, x, y, intensity].
+    """
+    try:
+        data = np.loadtxt(csv_path, delimiter=',', dtype=float)
+    except ValueError as e:
+        print(f"Error loading combined spots CSV {csv_path}: {e}")
+        return [None] * n_cells
+
+    if data.ndim == 1:
+        data = np.array([data])
+
+    cell_spots = [[] for _ in range(n_cells)]
+
+    for i in range(data.shape[0]):
+        try:
+            x = int(round(data[i][2]))
+            y = int(round(data[i][3]))
+            cell_id = int(mask[x, y])
+            if 1 <= cell_id <= n_cells:
+                spot = [
+                    int(data[i][0]),   # track ID
+                    int(data[i][1]),   # frame
+                    float(data[i][2]), # x
+                    float(data[i][3]), # y
+                    int(data[i][4])    # intensity
+                ]
+                cell_spots[cell_id - 1].append(spot)
+        except (IndexError, ValueError) as e:
+            print(f"Error processing spot {i} in {csv_path}: {e}")
+            continue
+
+    return cell_spots
 
 '''
 ================================================================================================================
