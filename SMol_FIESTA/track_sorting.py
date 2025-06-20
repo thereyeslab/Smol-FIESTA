@@ -535,13 +535,22 @@ def csv_name_sort_suffix(path: str, suffix:str='spotsAll') -> dict:
 
 # get all files under path with extension
 def get_file_names_with_ext(path: str, ext: str):
+    """
+    Recursively collect all files under `path` with extension `ext`,
+    ignoring any hidden files or directories (names starting with '.').
+    """
     flist = []
     for root, dirs, files in os.walk(path):
-        for file in files:
-            fname = file.split('.')
-            if (fname[-1] == ext):
-                flist.append(str(os.path.join(root, file)))
+        # drop hidden dirs
+        dirs[:] = [d for d in dirs if not d.startswith('.')]
+        for fname in files:
+            # skip hidden files
+            if fname.startswith('.'):
+                continue
+            if fname.lower().endswith(f".{ext.lower()}"):
+                flist.append(os.path.join(root, fname))
     return flist
+
 
 
 '''
