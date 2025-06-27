@@ -93,7 +93,7 @@ def main(config_path:str = None):
     if not os.path.isdir(output_path):
         raise ValueError('Directory do not exist, please run track_sorting.py first.')
 
-    tracks = pd.read_csv(str(os.path.join(output_path, 'intermidiates', ('gaps-and-fixes_decisions.csv' if use_gap_fixed else 'bound_decisions.csv'))))
+    tracks = pd.read_csv(str(os.path.join(output_path, 'intermediates', ('gaps-and-fixes_decisions.csv' if use_gap_fixed else 'bound_decisions.csv'))))
     tracks = tracks.loc[:, ~tracks.columns.str.contains('^Unnamed')]
 
     headers = tracks[['Video #', 'Cell', 'Track']].to_numpy()
@@ -381,6 +381,10 @@ def main(config_path:str = None):
     rebind_strict_spots_same = event_format_trackmate(rebind_strict_spots_same)
     rebind_strict_spots_diff = event_format_trackmate(rebind_strict_spots_diff)
     rebind_strict_spots_entiretrack = event_format_trackmate(rebind_strict_spots_entiretrack)
+
+    rebind_columns = ['Video #', 'Cell', 'Track', 'From', 'To', 'Time', 'Speed', 'Distance', 'x1', 'y1', 'x2', 'y2']
+    rebind_strict = pd.DataFrame(rebind_strict, columns=rebind_columns).astype({'Time': 'int'})
+    rebind_strict.to_csv(str(os.path.join(output_path, 'rebind-strict-event.csv')))
 
     boundtime_columns = ['Video #', 'Cell', 'Track', 'Event', 'StartFrame', 'EndFrame']
     diftime_columns = ['Video #', 'Cell', 'Track', 'Event', 'StartFrame', 'EndFrame']

@@ -85,8 +85,8 @@ def main(config_path:str = None):
         raise ValueError('Directory do not exist, please run track_sorting.py first.')
     logging_setup(output_path, 'bound-classification')
 
-    print_log('Reading from csv:', str(os.path.join(output_path, "Intermidiates", 'tracks.csv')))
-    tracks = pd.read_csv(str(os.path.join(output_path, "Intermidiates", 'tracks.csv')))
+    print_log('Reading from csv:', str(os.path.join(output_path, "Intermediates", 'tracks.csv')))
+    tracks = pd.read_csv(str(os.path.join(output_path, "Intermediates", 'tracks.csv')))
     tracks = tracks.loc[:, ~tracks.columns.str.contains('^Unnamed')]
 
     headers = tracks[['Video #', 'Cell', 'Track']].to_numpy()
@@ -154,7 +154,7 @@ def main(config_path:str = None):
             .assign(ContrictedDiffusion=decision_cdiffusion)
             .assign(Bound=decision_overall)
         )
-    pd.concat(output_both).to_csv(str(os.path.join(output_path, 'Intermidiates', 'bound_decisions.csv')))
+    pd.concat(output_both).to_csv(str(os.path.join(output_path, 'Intermediates', 'bound_decisions.csv')))
     return
 
 '''

@@ -191,9 +191,9 @@ def main(config_path:str = None):
                     final_list_track_spots.append(entry)
 
     # Output
-    print_log('Saving to csv:', str(os.path.join(output_path, "Intermidiates", 'tracks.csv')))
+    print_log('Saving to csv:', str(os.path.join(output_path, "Intermediates", 'tracks.csv')))
     final_list_track_spots = pd.DataFrame(final_list_track_spots, columns=final_list_track_spots_columns)
-    final_list_track_spots.to_csv(str(os.path.join(output_path, "Intermidiates", 'tracks.csv')))
+    final_list_track_spots.to_csv(str(os.path.join(output_path, "Intermediates", 'tracks.csv')))
     return
 
 '''
@@ -563,7 +563,7 @@ START
 # Setup Logging
 def logging_setup(path:str, script_name:str):
     logs_dir = os.path.join(path, 'Logs')
-    Inter = os.path.join(path, 'Intermidiates')
+    Inter = os.path.join(path, 'Intermediates')
     os.makedirs(Inter, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 

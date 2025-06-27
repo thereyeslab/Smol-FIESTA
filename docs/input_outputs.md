@@ -65,7 +65,7 @@ Under `[toggle]`
 
 **Outputs**
 1. tracks.csv:
-File: {csv_path}/{output_folder_name}/Intermidiates/tracks.csv
+File: {csv_path}/{output_folder_name}/Intermediates/tracks.csv
 A cleaned and annotated DataFrame where each row represents a spot in a valid track, with columns:
 Video #, Video Name, Cell, Track, Frame, x, y, Intensity
 
@@ -98,7 +98,7 @@ This script analyzes parsed tracks to determine the binding behavior of particle
 
 **Inputs**
 tracks.csv that is outputed from the `track_sorting.py`
-{csv_path}/{output_folder_name}/Intermidiates/tracks.csv
+{csv_path}/{output_folder_name}/Intermediates/tracks.csv
 
 **Parameters**
 | **Parameter**               | **Description**                                                                                                     |
@@ -107,7 +107,7 @@ tracks.csv that is outputed from the `track_sorting.py`
 | `distance_threshold_strict` | Stricter distance threshold (in pixels) for two spots to be considered **strictly bound** (`StrictBound = 1`).      |
 
 **Outputs**
-format: {csv_path}/{output_folder_name}/Intermidiates/bound_decisions.csv
+format: {csv_path}/{output_folder_name}/Intermediates/bound_decisions.csv
 
 bound_decisions.csv
 Original spot data with the following columns added: 
@@ -126,7 +126,7 @@ This script further refines track behavior interpretation by
 
 **Input**: 
 bound_decisions.csv outputted from the bound_classification.py
-Format: {csv_path}/{output_folder_name}/Intermidiates/bound_decisions.csv
+Format: {csv_path}/{output_folder_name}/Intermediates/bound_decisions.csv
 
 **Parameters**
 | **Parameter**          | **Type** | **Description**                                                                       |
@@ -147,7 +147,7 @@ Conditional Parameters (used for advanced filtering)
 | `Ratio_turnover_all` |     |                                   |
 
 **Ouputs**
- `gaps-and-fixes_decisions.csv` in the {csv_path}/{output_folder_name}/Intermidiates/gaps-and-fixes_decisions.csv
+ `gaps-and-fixes_decisions.csv` in the {csv_path}/{output_folder_name}/Intermediates/gaps-and-fixes_decisions.csv
 Contains the original spot data with the added columns below:
 | **Column Name** | **Description**                                                                                    |
 | --------------- | -------------------------------------------------------------------------------------------------- |
@@ -167,8 +167,8 @@ This script identifies and characterizes rebinding events in single-molecule tra
 
 **input**
 One of the following files (based on the use_gap_fixed flag):
-        {csv_path}/{output_folder_name}/Intermidiates/gaps-and-fixes_decisions.csv --> outputted from `Gaps_and_fixes.py`
-        {csv_path}/{output_folder_name}/Intermidiates/bound_decisions.csv --> outputted from `bound_classification.py`
+        {csv_path}/{output_folder_name}/Intermediates/gaps-and-fixes_decisions.csv --> outputted from `Gaps_and_fixes.py`
+        {csv_path}/{output_folder_name}/Intermediates/bound_decisions.csv --> outputted from `bound_classification.py`
         
 **Parameters**
 | Parameter                       | Description                                                                              |
@@ -340,7 +340,7 @@ One of the following files (based on the use_gap_fixed flag):
 | `min_fdiffusion`     | 0.001   | Min free diffusion              |
 
 **Outputs**
-1. `Diffusion_Coefficient_Calculation.csv` in {csv_path}/{output_folder_name}/Intermidiates/Diffusion_Coefficient_Calculation.csv
+1. `Diffusion_Coefficient_Calculation.csv` in {csv_path}/{output_folder_name}/Intermediates/Diffusion_Coefficient_Calculation.csv
 
 | Column Name              | Description                                                                 |
 |--------------------------|-----------------------------------------------------------------------------|
@@ -362,3 +362,7 @@ One of the following files (based on the use_gap_fixed flag):
 Contains:
     - Individual histograms for each population: Bound (green), Constrained (blue), Free (red)
     - Combined histogram with overlaid Gaussian fits (optional)
+
+# TwoExponential.py
+
+***pending***

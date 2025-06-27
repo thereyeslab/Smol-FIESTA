@@ -251,7 +251,12 @@ def main(config_path:str = None):
             if test_double:
                 # fit double‐exp + single‐exp
                 results, data_vals, lambda1, lambda2, p1, p2 = run_mixture_model(
-                    data_path, lambda_bleach, event_type, frameRate
+                data_path = data_path,
+                lambda_bleach = lambda_bleach,
+                event_type = event_type,
+                max_iterations = 100,
+                tolerance = 0.05,  # or whatever value you actually want
+                frameRate = frameRate
                 )
                 lambda1_s, mean_s, bic_s = run_single_exponential_model(data_vals, a=a)
                 bic_d = results["BIC Double Exponential"]
@@ -318,7 +323,7 @@ def main(config_path:str = None):
 
     # write out
     print(f"Results and plots saved to {pdf_path}")
-    merged_csv = os.path.join(output_folder,"Intermidiates", 'Exp1_probabilities.csv')
+    merged_csv = os.path.join(output_folder,"Intermediates", 'Exp1_probabilities.csv')
     raw_df.to_csv(merged_csv, index=False)
     print(f"Merged posterior CSV saved to {merged_csv}")
 

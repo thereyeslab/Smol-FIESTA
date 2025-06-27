@@ -136,7 +136,7 @@ def main(config_path: str = None):
 
     # Select the input file based on the toggle use_gap_fixed
     input_file = 'gaps-and-fixes_decisions.csv' if configs['toggle']['use_gap_fixed'] else 'bound_decisions.csv'
-    data = pd.read_csv(os.path.join(output_dir, 'intermidiates', input_file))
+    data = pd.read_csv(os.path.join(output_dir, 'intermediates', input_file))
 
     # Calculate basic bound counts for proportions (using original counts from CSV)
     bound_counts = data['Bound'].value_counts()
@@ -229,7 +229,7 @@ def main(config_path: str = None):
     sorted_final_results_with_correct_frames_df = final_results_with_correct_frames_df.sort_values(
         by=["Video #", "Cell", "Track", "Event"]
     )
-    output_csv_path = os.path.join(output_dir, "Intermidiates", 'Diffusion_Coefficient_Calculation.csv')
+    output_csv_path = os.path.join(output_dir, "Intermediates", 'Diffusion_Coefficient_Calculation.csv')
     sorted_final_results_with_correct_frames_df.to_csv(output_csv_path, index=False)
 
     # Prepare data for plotting

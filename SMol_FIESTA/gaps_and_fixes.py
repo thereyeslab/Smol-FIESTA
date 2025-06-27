@@ -78,8 +78,8 @@ def main(config_path:str = None):
     logging_setup(output_path, 'gaps-and-fixes')
 
 
-    print_log('Reading from csv:', str(os.path.join(output_path, 'Intermidiates', 'bound_decisions.csv')))
-    tracks = pd.read_csv(str(os.path.join(output_path, 'intermidiates', 'bound_decisions.csv')))
+    print_log('Reading from csv:', str(os.path.join(output_path, 'Intermediates', 'bound_decisions.csv')))
+    tracks = pd.read_csv(str(os.path.join(output_path, 'intermediates', 'bound_decisions.csv')))
     tracks = tracks.loc[:, ~tracks.columns.str.contains('^Unnamed')]
 
     headers = tracks[['Video #', 'Cell', 'Track']].to_numpy()
@@ -193,8 +193,8 @@ def main(config_path:str = None):
               '\n\t-> Fraction Filtered from total:', frames_filtered_onlyBound / frames_total,
               )
 
-    print_log('Saving to:', str(os.path.join(output_path, 'intermidiates', 'gaps-and-fixes_decisions.csv')))
-    pd.concat(output_tracks).to_csv(str(os.path.join(output_path, 'intermidiates', 'gaps-and-fixes_decisions.csv')))
+    print_log('Saving to:', str(os.path.join(output_path, 'intermediates', 'gaps-and-fixes_decisions.csv')))
+    pd.concat(output_tracks).to_csv(str(os.path.join(output_path, 'intermediates', 'gaps-and-fixes_decisions.csv')))
 
     return
 
