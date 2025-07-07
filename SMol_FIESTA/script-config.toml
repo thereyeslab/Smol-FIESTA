@@ -3,9 +3,9 @@
 # 1. Paths
 # ──────────────────────────────────────────────────────────────────────────────
 [path]
-csv_path             = 'D:\Microscopy\SMS_BP-master2\100msX100noB_TEST20n200B_20Dif_sameprob\Images\AnalysisRebindCBC'       # Folder containing TrackMate CSV exports
-mask_path            = 'D:\Microscopy\SMS_BP-master2\100msX100noB_TEST20n200B_20Dif_sameprob\segmented\seg1'        # Folder of per-frame PNG masks (dimensions must match video)
-output_folder_name   = "SF54"     # Name for the pipeline’s output directory
+csv_path             = 'C:\Users\JpRas\OneDrive\Escritorio\SearchAnalysis\wt\timelapse\AnalysisRebindCBC_start0_Quality5'      # Folder containing TrackMate CSV exports
+mask_path            = 'C:\Users\JpRas\OneDrive\Escritorio\SearchAnalysis\wt\seg\all'         # Folder of per-frame PNG masks (dimensions must match video)
+output_folder_name   = "Methods"     # Name for the pipeline’s output directory
 one_csv_per_cell     = true # if true : one csv spots file per cell per video, if false: a single csv spots file per video
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -14,27 +14,27 @@ one_csv_per_cell     = true # if true : one csv spots file per cell per video, i
 [toggle]
 use_gap_fixed           = true   # Interpolate short detection gaps before reclassification
 filter_by_binding_prop  = true   # Drop tracks whose bound+constrained fraction is out of range
-run_visualizer          = false   # Generate colored overlay videos of track behaviors
+run_visualizer          = true   # Generate colored overlay videos of track behaviors
 run_MSD_calculations    = true   # Compute and plot Mean Squared Displacement (MSD) curves
 run_fixed_particle      = false   # Execute experimental ComDet-based rebinding analysis
-bacteria_analysis       = false   # Aggressive overlap filtering for single-molecule (bacterial) data
+bacteria_analysis       = true   # Aggressive overlap filtering for single-molecule (bacterial) data
 two_exponential_analysis= true
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 3. Track-Sorting
 # ──────────────────────────────────────────────────────────────────────────────
 [track-sorting]
-allowed_gap_max           = 4     # Max consecutive missing frames before splitting a track
-allowed_track_length_min  = 6     # Discard tracks shorter than this (frames)
-allowed_track_length_max  = 50000  # Discard tracks longer than this (frames)
+allowed_gap_max           = 10    # Max consecutive missing frames before splitting a track
+allowed_track_length_min  = 60    # Discard tracks shorter than this (frames)
+allowed_track_length_max  = 1500  # Discard tracks longer than this (frames)
 allowed_overlap           = 30    # Overlap frames threshold for collision resolution
-concurrent_max            = 10  # Max consecutive frames with >1 simultaneous spots
+concurrent_max            = 10 # Max consecutive frames with >1 simultaneous spots
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 4. Bound-Classification
 # ──────────────────────────────────────────────────────────────────────────────
 [bound-classification]
-distance_threshold         = 2.4   # px: relaxed binding step threshold over ±4-frame window
+distance_threshold         = 2.6   # px: relaxed binding step threshold over ±4-frame window
 distance_threshold_strict  = 1.2   # px: strict binding threshold (low false-pos) for high-framerate
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -43,9 +43,9 @@ distance_threshold_strict  = 1.2   # px: strict binding threshold (low false-pos
 [gaps-and-fixes]
 min_time_strict            = 4      # frames: min length for strict-binding; shorter ⇒ constrained
 min_time_constrained       = 4      # frames: min for constrained diffusion; shorter ⇒ free
-min_time_diffusion         = 0      # frames: min for free diffusion; shorter ⇒ context reclassification
+min_time_diffusion         = 3      # frames: min for free diffusion; shorter ⇒ context reclassification
 max_bound_gapFill          = 4      # frames: gap allowance to merge into strict-binding
-min_prop_binding           = 0.00   # fraction: min track-level bound+constrained to keep
+min_prop_binding           = 0.08   # fraction: min track-level bound+constrained to keep
 max_prop_binding           = 1.01   # fraction: max track-level bound+constrained to keep
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -56,23 +56,23 @@ rebind_distance_same          = 1.0     # px: same-site rebinding distance thres
 rebind_distance_diff          = 4.0     # px: nearby-site rebinding distance threshold
 min_time_bound_strict         = 4       # frames: min strict-binding for rebinding logs
 min_time_rebinding_strict     = 4
-max_time_rebinding            = 10000     # Reduce the limit for unsuccessful rebinding
+max_time_rebinding            = 100     # Reduce the limit for unsuccessful rebinding
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 7. MSD-Analysis
 # ──────────────────────────────────────────────────────────────────────────────
 [MSD-analysis]
-time_interval_ms     = 10.0    # ms: frame interval (must match acquisition)
-pixel_size_um        = 0.094   # µm: physical pixel size for D calculations
+time_interval_ms     = 1000.0    # ms: frame interval (must match acquisition)
+pixel_size_um        = 0.130   # µm: physical pixel size for D calculations
 use_brownian_only    = true    # force anomalous exponent α = 1 (pure Brownian fit)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 8. Visualizer
 # ──────────────────────────────────────────────────────────────────────────────
-[Visualizer]
-tail_effect_enabled  = true    # draw motion-blur “tails” for moving spots
-spot_diameter        = 6       # px diameter of each spot in the overlay
+[visualizer]
+tail_effect_enabled  = false    # draw motion-blur “tails” for moving spots
+spot_diameter        = 4       # px diameter of each spot in the overlay
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 9. Rebind-Fixed-Particle

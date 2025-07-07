@@ -97,7 +97,7 @@ def main(config_path:str = None):
     else:
         spot_csv_combined = natsorted([
         os.path.join(csv_path, f) for f in os.listdir(csv_path)
-        if f.endswith('_spots.csv') and 'cell' not in f.lower()])
+        if f.endswith('_spots*.csv') and 'cell' not in f.lower()])
         if not len(spot_csv_combined) == len(masks):
             raise ValueError('Different number of Masks and Videos, you may have a video without tracks')
 

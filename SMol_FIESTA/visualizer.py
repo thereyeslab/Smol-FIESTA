@@ -185,7 +185,7 @@ def main(config_path: str = None):
     mask_path = configs['path']['mask_path']
     output_folder_name = configs['path']['output_folder_name']
     data_dir = os.path.join(csv_path, output_folder_name)
-    outpath = os.path.join(data_dir, 'Visualizer')
+    outpath = os.path.join(data_dir, 'visualizer')
     os.makedirs(outpath, exist_ok=True)
 
     use_gap_fixes = configs['toggle']['use_gap_fixed']
@@ -193,7 +193,7 @@ def main(config_path: str = None):
 
     colors = {
         'Cell_Background': [0, 0, 0],
-        'Cell_Border': [86, 86, 86],
+        'Cell_Border': [55, 55, 55], # 86,86,86- 1,1,1 barely visible
         'Bound': [102, 204,  51],
         'Diffuse': [204,  51, 102],
         'Constricted': [ 51, 102, 204],
@@ -214,7 +214,6 @@ def main(config_path: str = None):
         tracks_by_video[vid].append(tr)
 
     spot_diameter = configs.get('visualizer', {}).get('spot_diameter', 6.0)
-
     print('[Visualizer]')
     for i, mask_file in enumerate(masks):
         print(f'(Video {i+1}) -> Mask: {mask_file}')

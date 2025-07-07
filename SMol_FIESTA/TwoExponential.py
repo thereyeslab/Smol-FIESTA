@@ -10,6 +10,22 @@ from sklearn.linear_model import LogisticRegression
 import tomllib
 import argparse
 import time
+import matplotlib.ticker as ticker
+
+import matplotlib as mpl
+
+mpl.rcParams.update({
+    # use Arial for all text
+    'font.family':     'sans-serif',
+    'font.sans-serif': ['Arial'],
+    # embed fonts as Type 42 (TrueType) so Illustrator can edit them
+    'pdf.fonttype':    42,
+    'ps.fonttype':     42,
+    # optionally turn off the grid globally
+    'axes.grid':       False,
+})
+
+
 # Error handling for threadpoolctl issue
 os.environ["OMP_NUM_THREADS"] = "1"
 def train_logistic_on_synthetic(lambda1, lambda2, a=4.0, n=20000):
@@ -97,7 +113,7 @@ def run_single_exponential_model(data, a=4.0):
     return lambda1, mean_time_single, bic
 
 
-def run_mixture_model(data_path, lambda_bleach, event_type=None, max_iterations=100, tolerance=0.05, frameRate=1):
+def run_mixture_model(data_path, event_type=None, max_iterations=100, tolerance=0.05, frameRate=1):
     # load and subset
     df = pd.read_csv(data_path)
     if event_type:
@@ -106,7 +122,7 @@ def run_mixture_model(data_path, lambda_bleach, event_type=None, max_iterations=
         raw = df['time'].values
     data = raw / frameRate
 
-    # automatically choose left-truncation at minimum observed
+    # fixed left-truncation at 4.0
     a = np.min(data)
 
     # EM-like fit of truncated double exponential
@@ -133,18 +149,12 @@ def run_mixture_model(data_path, lambda_bleach, event_type=None, max_iterations=
     # corrected vs noncorrected means
     mean1_nc = 1 / l1
     mean2_nc = 1 / l2
-    mean1_c  = mean1_nc * (1 /  lambda_bleach) / ((1 / lambda_bleach) - mean1_nc)
-    mean2_c  = mean2_nc * (1 / lambda_bleach) / ((1 / lambda_bleach) - mean2_nc)
-
+    label = 'Bound time' if event_type == 'Bound' else 'Diffusion time'
     # assemble results
-    results = {
-        "Estimated Mean Time 1 (corrected)":   mean1_c,
-        "Estimated Decay Rate 1 (corrected)":  1 / mean1_c,
-        "Estimated Mean Time 2 (corrected)":   mean2_c,
-        "Estimated Decay Rate 2 (corrected)":  1 / mean2_c,
-        "Estimated Mean Time 1 (non-corrected)": mean1_nc,
+    results = { label:"",
+        "Estimated Mean Time 1 (non-corrected)": mean1_nc + a,
         "Estimated Decay Rate 1 (non-corrected)": l1,
-        "Estimated Mean Time 2 (non-corrected)": mean2_nc,
+        "Estimated Mean Time 2 (non-corrected)": mean2_nc + a,
         "Estimated Decay Rate 2 (non-corrected)": l2,
         "Fraction of Exp Component 1":           p1,
         "Fraction of Exp Component 2":           p2,
@@ -154,64 +164,151 @@ def run_mixture_model(data_path, lambda_bleach, event_type=None, max_iterations=
     }
     return results, data, l1, l2, p1, p2
 
-def plot_results(data, lambda1, lambda2, p1, p2, lambda1_single=None, mean_time_single=None):
-    bins = np.linspace(0, data.max(), 50)
-    hist, bins = np.histogram(data, bins=bins, density=True)
-    bin_centers = 0.5 * (bins[1:] + bins[:-1])
+def plot_results(data, λ1, λ2, p1, p2, λ1_single=None, mean_time_single=None):
+    """
+    Big-text, no-grid histogram with single or double exponential fit.
+    """
+    a       = data.min()
+    bins    = np.linspace(0, data.max(), 50)
+    hist, _ = np.histogram(data, bins=bins, density=True)
+    centers = 0.5 * (bins[1:] + bins[:-1])
 
-    plt.figure(figsize=(10, 6))
+    plt.figure()
+    plt.grid(False)
 
-    # Plot histogram
-    plt.hist(data, bins=bins, density=True, alpha=0.6, color='grey', label='Data', edgecolor='black')
+    # raw data
+    plt.hist(data, bins=bins, density=True,
+             color='lightgray', edgecolor='black', alpha=0.6)
 
-    if lambda1_single is not None and mean_time_single is not None:
-        # Plot single exponential fit
-        pdf_single = expon.pdf(bin_centers, scale=1 / lambda1_single)
-        plt.plot(bin_centers, pdf_single, 'g--', linewidth=2, label=f'Single Exponential Fit (mean={1/lambda1_single:.3f} λ={lambda1_single:.3f})')
+    if λ1_single is not None:
+        # single-exp
+        pdf = expon.pdf(centers, scale=1/λ1_single)
+        plt.plot(centers, pdf, 'g--', linewidth=3,
+                 label=f'Single exp\n(mean {(1/λ1_single)+a:.2f}s)')
     else:
-        # Plot double exponential fit
-        pdf1 = p1 * expon.pdf(bin_centers, scale=1 / lambda1)
-        pdf2 = p2 * expon.pdf(bin_centers, scale=1 / lambda2)
-        plt.fill_between(bin_centers, pdf2, pdf1 + pdf2, color='red', alpha=0.5, label=f'Exp 1 (mean={1/lambda1:.3f}, λ={lambda1:.3f})')
-        plt.fill_between(bin_centers, 0, pdf2, color='blue', alpha=0.5, label=f'Exp 2 (mean={1/lambda2:.3f}, λ={lambda2:.3f})')
-        plt.plot(bin_centers, pdf1 + pdf2, 'k-', linewidth=2, label='Total Fit (Double Exponential)')
+        # double-exp filled bands + total fit
+        pdf1 = p1        * expon.pdf(centers, scale=1/λ1)
+        pdf2 = (1.0 - p1) * expon.pdf(centers, scale=1/λ2)
+        plt.fill_between(centers, 0,       pdf2,       color='C1', alpha=0.4,
+                         label=f'2nd exp (mean {(1/λ2)+a:.2f}s)')
+        plt.fill_between(centers, pdf2,    pdf1 + pdf2, color='C0', alpha=0.4,
+                         label=f'1st exp (mean {(1/λ1)+a:.2f}s)')
+        plt.plot(centers, pdf1 + pdf2, 'k-', linewidth=3, label='Total fit')
 
-    plt.xlabel('Time')
-    plt.ylabel('Density')
-    plt.legend()
-    plt.title('Histogram with Exponential Fits')
+    # force x-axis to start at zero
+    ax = plt.gca()
+    ax.set_xlim(left=0)
 
+    # big, sparse ticks
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(5))
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(4))
+    ax.tick_params(axis='both', which='major',
+                   labelsize=20, length=10, width=2)
+
+    # labels & legend
+    plt.xlabel('time (seconds)', fontsize=24)
+    plt.ylabel('PDF',              fontsize=24)
+    plt.title('Histogram with Exponential Fits', fontsize=28)
+    plt.legend(fontsize=20, frameon=False)
     plt.tight_layout()
 
-def plot_results_with_trendlines(data, lambda1, lambda2, p1, p2, lambda1_single=None, mean_time_single=None):
-    bins = np.linspace(0, data.max(), 50)
-    hist, bins = np.histogram(data, bins=bins, density=True)
-    bin_centers = 0.5 * (bins[1:] + bins[:-1])
 
-    plt.figure(figsize=(10, 6))
+def plot_results(data, λ1, λ2, p1, p2, λ1_single=None, mean_time_single=None):
+    """
+    Big‐text, no‐grid histogram with single or double exponential fit.
+    """
+    a       = data.min()
+    bins    = np.linspace(0, data.max(), 50)
+    hist, _ = np.histogram(data, bins=bins, density=True)
+    centers = 0.5 * (bins[1:] + bins[:-1])
 
-    # Plot histogram
-    plt.hist(data, bins=bins, density=True, alpha=0.6, color='grey', label='Data', edgecolor='black')
+    plt.figure(figsize=(8,6))
+    plt.grid(False)
 
-    # Plot double exponential fit as trendlines
-    pdf1 = p1 * expon.pdf(bin_centers, scale=1 / lambda1)
-    pdf2 = p2 * expon.pdf(bin_centers, scale=1 / lambda2)
+    # gray bars
+    plt.hist(data, bins=bins, density=True,
+             color='#858282', edgecolor='black', alpha=0.6)
 
-    plt.plot(bin_centers, pdf1, 'r-', linewidth=2, label=f'Exp 1 Trendline (mean={1/lambda1:.3f}, λ={lambda1:.3f})')
-    plt.plot(bin_centers, pdf2, 'b-', linewidth=2, label=f'Exp 2 Trendline (mean={1/lambda2:.3f}, λ={lambda2:.3f})')
-    #mean_time1_correctedplt.plot(bin_centers, pdf1 + pdf2, 'k-', linewidth=2, label='Total Fit (Double Exponential)')
-    '''
-    # Optionally, plot single exponential fit
-    if lambda1_single is not None and mean_time_single is not None:
-        pdf_single = expon.pdf(bin_centers, scale=1 / lambda1_single)
-        plt.plot(bin_centers, pdf_single, 'g--', linewidth=2, label=f'Single Exponential Fit (mean= {1/lambda1_single:.3f}, λ={lambda1_single:.3f})')
-    '''
-    plt.xlabel('Time' + '(seconds)')
-    plt.ylabel('Density')
-    plt.legend()
-    plt.title('Histogram with Double Exponential Trendlines')
+    if λ1_single is not None:
+        # single‐exp fit
+        pdf = expon.pdf(centers, scale=1/λ1_single)
+        plt.plot(centers, pdf, 'g--', linewidth=3,
+                 label=f'Single exp\n(mean {(1/λ1_single)+a:.2f}s)')
+    else:
+        # double‐exp filled bands
+        pdf1 = p1        * expon.pdf(centers, scale=1/λ1)
+        pdf2 = (1.0 - p1) * expon.pdf(centers, scale=1/λ2)
+        # 2nd exp band in blue
+        plt.fill_between(centers, 0, pdf2,
+                         color='#1f77b4', alpha=0.4,
+                         label=f'2nd exp (mean {(1/λ2)+a:.2f}s)')
+        # 1st exp band in red
+        plt.fill_between(centers, pdf2, pdf1+pdf2,
+                         color='r', alpha=0.4,
+                         label=f'1st exp (mean {(1/λ1)+a:.2f}s)')
+        plt.plot(centers, pdf1+pdf2, 'k-', linewidth=3,
+                 label='Total fit')
 
-    plt.tight_layout()# Known photobleaching rate
+    # force x axis to start at zero
+    ax = plt.gca()
+    ax.set_xlim(left=0)
+
+    # big, sparse ticks
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(5))
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(4))
+    ax.tick_params(axis='both', which='major',
+                   labelsize=24, length=10, width=2)
+
+    # labels & legend
+    plt.xlabel('time (seconds)', fontsize=24)
+    plt.ylabel('PDF',              fontsize=26)
+    plt.title('Histogram with Exponential Fits', fontsize=28)
+    plt.legend(fontsize=24, frameon=False)
+    plt.tight_layout()
+
+
+def plot_results_with_trendlines(data, λ1, λ2, p1, p2, λ1_single=None, mean_time_single=None):
+    """
+    Big‐text, no‐grid histogram with dashed trendlines only.
+    """
+    a       = data.min()
+    bins    = np.linspace(0, data.max(), 50)
+    hist, _ = np.histogram(data, bins=bins, density=True)
+    centers = 0.5 * (bins[1:] + bins[:-1])
+
+    plt.figure(figsize=(8,6))
+    plt.grid(False)
+
+    # gray bars
+    plt.hist(data, bins=bins, density=True,
+             color='#858282', edgecolor='black', alpha=0.6)
+
+    # dashed trendlines
+    pdf1 = p1        * expon.pdf(centers, scale=1/λ1)
+    pdf2 = (1.0 - p1) * expon.pdf(centers, scale=1/λ2)
+    plt.plot(centers, pdf1, 'r--', linewidth=3,
+             label=f'1st exp\n(mean {(1/λ1)+a:.2f}s)')
+    plt.plot(centers, pdf2, color='#1f77b4', linestyle='--', linewidth=3,
+             label=f'2nd exp\n(mean {(1/λ2)+a:.2f}s)')
+
+    # force x axis to start at zero
+    ax = plt.gca()
+    ax.set_xlim(left=0)
+
+    # big, sparse ticks
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(5))
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(4))
+    ax.tick_params(axis='both', which='major',
+                   labelsize=24, length=10, width=2)
+
+    # labels & legend
+    plt.xlabel('time (seconds)', fontsize=24)
+    plt.ylabel('PDF',              fontsize=26)
+    plt.title('Histogram with Double Exponential Trendlines', fontsize=28)
+    plt.legend(fontsize=24, frameon=False)
+    plt.tight_layout()
+
+
 
 def main(config_path:str = None):
     if not config_path:
@@ -225,12 +322,8 @@ def main(config_path:str = None):
     output_path = str(os.path.join(csv_path, configs['path']['output_folder_name']))
     data_path = str(os.path.join(output_path, 'rebind-Events.csv'))
 
-    # Known photobleaching rate
-    lambda_bleach = 1 / 10000000
-
     # Path, measurement and frame rate
-    measurement = 'time'
-    interval    = 1000  # ms
+    interval    = configs['MSD-analysis']['time_interval_ms']
     frameRate   = 1000 / interval
 
     # Toggles
@@ -244,82 +337,85 @@ def main(config_path:str = None):
     raw_df['Posterior_Prob_Exp1'] = "NA"
     with PdfPages(pdf_path) as pdf:
         for event_type, test_double in [('Bound', process_bound), ('SearchTime', process_search)]:
-            # extract & scale
             data_vals = raw_df.loc[raw_df['type'] == event_type, 'time'].values / frameRate
             a = np.min(data_vals)
+            lambda1_s, mean_s, bic_s = run_single_exponential_model(data_vals, a=a)
+            xlabel = 'Bound time' if event_type == 'Bound' else 'Diffusion time'
 
             if test_double:
-                # fit double‐exp + single‐exp
                 results, data_vals, lambda1, lambda2, p1, p2 = run_mixture_model(
-                data_path = data_path,
-                lambda_bleach = lambda_bleach,
-                event_type = event_type,
-                max_iterations = 100,
-                tolerance = 0.05,  # or whatever value you actually want
-                frameRate = frameRate
+                    data_path=data_path,
+                    event_type=event_type,
+                    max_iterations=100,
+                    tolerance=0.05,
+                    frameRate=frameRate
                 )
-                lambda1_s, mean_s, bic_s = run_single_exponential_model(data_vals, a=a)
                 bic_d = results["BIC Double Exponential"]
-                print(f"{event_type}: BIC single = {bic_s}, BIC double = {bic_d}")
 
                 if bic_s < bic_d:
-                    # single exp wins → force single, posterior = 1
                     plt.figure(figsize=(8, 4))
-                    txt = (
-                        f"{event_type} single‐exp\n"
-                        f"Mean={mean_s:.3f}, λ={lambda1_s:.3f}, "
-                        f"BIC single={bic_s:.1f}, BIC double={bic_d:.1f}"
+                    plt.text(
+                        0.1, 0.1,
+                        f"{event_type} single-exp\nMean={mean_s:.3f}, λ={lambda1_s:.3f}, BIC single={bic_s:.1f}",
+                        fontsize=12
                     )
-                    plt.text(0.1, 0.1, txt, fontsize=12)
-                    plt.axis('off'); pdf.savefig(); plt.close()
+                    plt.axis('off');
+                    pdf.savefig();
+                    plt.close()
 
                     plot_results(data_vals, None, None, None, None, lambda1_s, mean_s)
-                    pdf.savefig(); plt.close()
+                    plt.xlabel(xlabel);
+                    pdf.savefig();
+                    plt.close()
 
-                    raw_df.loc[
-                        raw_df['type'] == event_type, 'Posterior_Prob_Exp1'
-                    ] = 1.0
+                    raw_df.loc[raw_df['type'] == event_type, 'Posterior_Prob_Exp1'] = 1.0
 
                 else:
-                    # double‐exp path
                     plt.figure(figsize=(8, 4))
-                    plt.text(0.1, 0.05, '\n'.join(f"{k}: {v}" for k, v in results.items()), fontsize=12)
-                    plt.axis('off'); pdf.savefig(); plt.close()
+                    plt.text(
+                        0.1, 0.05,
+                        '\n'.join(f"{k}: {v}" for k, v in results.items()),
+                        fontsize=12
+                    )
+                    plt.axis('off');
+                    pdf.savefig();
+                    plt.close()
 
                     plot_results(data_vals, lambda1, lambda2, p1, p2)
-                    pdf.savefig(); plt.close()
+                    plt.xlabel(xlabel);
+                    pdf.savefig();
+                    plt.close()
 
                     plot_results_with_trendlines(data_vals, lambda1, lambda2, p1, p2)
-                    pdf.savefig(); plt.close()
+                    plt.xlabel(xlabel);
+                    pdf.savefig();
+                    plt.close()
 
                     logistic_model = train_logistic_on_synthetic(lambda1, lambda2, a=a)
                     x_adj = data_vals - a
-                    S1    = np.exp(-lambda1 * a)
-                    S2    = np.exp(-lambda2 * a)
-                    f1    = lambda1 * np.exp(-lambda1 * x_adj) / S1
-                    f2    = lambda2 * np.exp(-lambda2 * x_adj) / S2
-                    llr   = np.log(np.clip(f1,1e-300,None) / np.clip(f2,1e-300,None)).reshape(-1,1)
-                    post  = logistic_model.predict_proba(llr)[:,1]
-
-                    raw_df.loc[
-                        raw_df['type'] == event_type, 'Posterior_Prob_Exp1'
-                    ] = post
+                    S1 = np.exp(-lambda1 * a)
+                    S2 = np.exp(-lambda2 * a)
+                    f1 = lambda1 * np.exp(-lambda1 * x_adj) / S1
+                    f2 = lambda2 * np.exp(-lambda2 * x_adj) / S2
+                    llr = np.log(np.clip(f1, 1e-300, None) / np.clip(f2, 1e-300, None)).reshape(-1, 1)
+                    post = logistic_model.predict_proba(llr)[:, 1]
+                    raw_df.loc[raw_df['type'] == event_type, 'Posterior_Prob_Exp1'] = post
 
             else:
-                # toggle off → force single only
-                lambda1_s, mean_s, bic_s = run_single_exponential_model(data_vals, a=a)
-                print(f"{event_type}: forced single‐exp. BIC single = {bic_s}")
-
                 plt.figure(figsize=(8, 4))
-                txt = (
-                    f"{event_type} forced single‐exp\n"
-                    f"Mean={mean_s:.3f}, λ={lambda1_s:.3f}, BIC={bic_s:.1f}"
+                plt.text(
+                    0.1, 0.1,
+                    f"{event_type} forced single-exp\nMean={mean_s:.3f}, λ={lambda1_s:.3f}, BIC={bic_s:.1f}",
+                    fontsize=12
                 )
-                plt.text(0.1, 0.1, txt, fontsize=12)
-                plt.axis('off'); pdf.savefig(); plt.close()
+                plt.axis('off');
+                pdf.savefig();
+                plt.close()
 
                 plot_results(data_vals, None, None, None, None, lambda1_s, mean_s)
-                pdf.savefig(); plt.close()
+                plt.xlabel(xlabel);
+                pdf.savefig();
+                plt.close()
 
     # write out
     print(f"Results and plots saved to {pdf_path}")
