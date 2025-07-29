@@ -8,16 +8,14 @@ Calculate relevant track characteristics by tracing track behaviors and rebindin
 
 Input:
     Either of:
-        {csv_path}/{output_folder_name}/gaps-and-fixes_decisions.csv
-        {csv_path}/{output_folder_name}/bound_decisions.csv
+        {csv_path}/{output_folder_name}/Intermediates/gaps-and-fixes_decisions.csv
+        {csv_path}/{output_folder_name}Intermediates/bound_decisions.csv
     Determined by parameter: {use_gap_fixed}
 
 Output:
     {csv_path}/{output_folder_name}/RESULT_rebind.txt
-    {csv_path}/{output_folder_name}/rebind-strict-event.csv
-    {csv_path}/{output_folder_name}/rebind-strict-boundtime.csv
-    {csv_path}/{output_folder_name}/rebind-AllDiffusion-time.csv
-    {csv_path}/{output_folder_name}/rebind-strict-rebindingtime.csv
+    {csv_path}/{output_folder_name}/RESULT_rebind.csv
+    {csv_path}/{output_folder_name}/rebind-events.csv
 
 Parameters:
     rebind_distance_same: Determines rebinds to same particles if < parameter
