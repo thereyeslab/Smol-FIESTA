@@ -186,81 +186,75 @@ One of the following files (based on the use_gap_fixed flag):
 
 
 **ouputs**
-1. `RESULT_rebind.csv` : Summary of rebinding statistics (counts, proportions, timing).
+1. `RESULT_rebind.csv` : Summary of rebinding statistics (counts, proportions).
 
-**Bound section**
-| Metric                             | Description  and values                                             |
-| ---------------------------------- | ------------------------------------------------------------ |
-| Constrained Diffusion Time (Frame) | Number of frames showing constrained diffusion +  Descriptive statistics of constrained diffusion durations (Mean / Std / Min / Quartiles, Max )|
-| Strict Bound Time (Frame)          | Number of frames showing strictly bound +  Descriptive statistics of constrained diffusion durations (Mean / Std / Min / Quartiles, Max                      |
-| Flanked Bound Time (Frame)         | Number of frames showing strict binding events flanked by diffusion    +  Descriptive statistics of constrained diffusion durations (Mean / Std / Min / Quartiles, Max            |
-| Bound Transitions (by Frame)       | Transition frequency and probability from bound to diffusion  |
-**Rebind section**
 
+**Rebinding section**
 | Metric                              | Description                                      |
 | ----------------------------------- | ------------------------------------------------ |
-| Strict Bindings Rebind Time (Frame) | Total number of frames measured between binding events (rebindings) + Descriptive statistics of rebinding durations |
 | Rebinding (Events)                  | Number of successful vs. failed rebinding events + (Probability of Success) Ratio of successful rebindings to total attempts|
-
 **Note**
 Unsuccessful rebinding: rebinding does not occur within allowed time (`max_time_rebinding`), took too long to rebind.
-
-**Constrained section**
-| Metric                            | Description                                    |
-| --------------------------------- | ---------------------------------------------- |
-| Constrained Diffusion Transitions (by events) | Count of transitions from constrained to bound + probability of transition  |
-**Fast Diffusion section**
-| Metric                       | Description                                        |
-| ---------------------------- | -------------------------------------------------- |
-| Fast Diffusion Time (Frame)  | Number of frames classified as fast/free diffusion +  Descriptive statistics of fast diffusion durations |
-**All Diffusion (Fast + Constrained) section**
-
-| Metric                                | Description                                          |
-| ------------------------------------- | ---------------------------------------------------- |
-|Diffusion(All) Transitions (by Frame)           | Number of diffusion frames transitioning to bound  + the probability of transition   |
-| Diffusion(with strict binding event in track) Transitions (by Frame)        | Number of diffusion frames transitioning to strict bound +  the probability of transition |    |
-| Diffusion (All) Time (Frame)          | Total time spent in any diffusion state + Descriptive statistics of all diffusion durations            |
-
 
 **All Events section**
 | Metric                        | Description                            |
 | ----------------------------- | -------------------------------------- |
-| All Frames                    | Total number of frames analyzed        |
-| Fast Diffusion (Frame)        | Frame count and percent in fast diffusive state  |
-| Constrained Diffusion (Frame) | Frame count and percent in constrained diffusive state    |
-| Bound (Frame)                 | Frame count and percent in bound state |
+| Fast Diffusion       | number and proportion of events in fast diffusive state  |
+| Constrained Diffusion| number and proportion of events in constrained diffusive state    |
+| Bound                | number and proportion of events in bound state |
 
-2. `rebind-strict-event.csv`
-Records transitions between binding events within tracks under strict criteria. 
+2. `RESULT_rebind.txt`
+| Section                     | Column Name                        | Description                                                                          |
+| --------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------ |
+| **Event Mean Time**         | `Bound`                            | Duration the molecule remained in the bound (immobile) state             |
+|                             | `C. Diffusion`                     | Duration in the confined diffusion state (restricted motion)             |
+|                             | `F. Diffusion`                     | Duration in the fast diffusion (free movement) state                     |
+|                             | `Diffusion Time`                   | Combined time in any diffusion state (Confined + Fast)                   |
+|                             | `Rebind Time`                      | Time (in frames) it took for a molecule to return to the bound state after unbinding |
+|                             | `count`                            | Number of trajectories or events contributing to the statistics                      |
+|                             | `mean`, `std`, `min`               | Mean, standard deviation, and minimum duration (frames) for that event type          |
+|                             | `25%`, `50%`, `75%`                | First, second (median), and third quartile durations                                 |
+|                             | `max`                              | Maximum observed duration in frames                                                  |
+| **Rebinding Probability**   | `Successful`                       | Number of unbound molecules that re-entered the bound state within 50 frames         |
+|                             | `Unsuccessful`                     | Number of unbound molecules that did **not** rebind within 50 frames                 |
+|                             | `Probability`                      | Rebinding success rate = Successful / (Successful + Unsuccessful)                    |
+| **Event Proportions**       | `Event`                            | The type of motion state: Bound, Confined Diffusion, or Fast Diffusion               |
+|                             | `Count`                            | Number of sub-tracks or events assigned to each motion state                         |
+|                             | `Proportion`                       | Fraction of total events that belong to each state                                   |
+| **Transition Matrix (3x3)** | `From_X.To_Y`                      | Probability per frame of switching from one state (X) to another state (Y)           |
+|                             | `From_F.dif`                       | Transitions starting from Fast Diffusion                                             |
+|                             | `From_C.Dif`                       | Transitions starting from Confined Diffusion                                         |
+|                             | `From_Bound`                       | Transitions starting from Bound                                                      |
+|                             | `To_F.dif`, `To_C.Dif`, `To_Bound` | Probabilities of entering each state from the current one                            |
+| **Transition Matrix (2x2)** | `From Diffusion`                   | Combined transitions from both diffusion states (Fast + Confined) to Bound or itself |
+|                             | `From Bound`                       | Transitions from Bound to Diffusion or itself                                        |
+|                             | `To Diffusion`                     | Probability of transitioning into any diffusion state                                |
+|                             | `To Bound`                         | Probability of transitioning into Bound state                                        |
 
-| Column Name | Description|
-| ----------- | ------------------------------------------------------------------------ |
-| `Video #`   | Index or identifier of the video in the dataset.                    |
-| `Cell`      | Cell identifier within the video.                                             |
-| `Track`     | Unique track ID for the particle that rebounded.                              |
-| `From`      | Identifier of the first (initial) binding state.                              |
-| `To`        | Identifier of the second (rebound) binding state.                             |
-| `Time`      | Time (in frames) between the `From` and `To` events.                          |
-| `Speed`     | Average speed (e.g., pixels/frame) during the diffusion phase between events. |
-| `Distance`  | Euclidean distance between the two binding locations.                         |
-| `x1`, `y1`  | Coordinates of the initial (first) binding location.                          |
-| `x2`, `y2`  | Coordinates of the rebound (second) binding location.                         |
 
-3. `rebind-strict-boundtime.csv`
-The durations for each "binding event" within the track identified under strict criteria. 
-Note: An event is a subset of a track with a consistent binding behavior. 
-columns include: [Video #,	Cell,	Track,	Event (binding),	Bound Time]
+3. `rebind-Events.csv`
+This file records individual state transitions per track, capturing detailed rebinding events.
 
-4. `rebind-flanked-strict-boundtime.csv`
-Same as above but for "binding events" that are flanked by diffusion segments (i.e., D → B → D).
-columns include: [Video #,	Cell,	Track,	Event (flanked binding),	Bound Time]
+| Column Name | Description                                                                         |
+| ----------- | ----------------------------------------------------------------------------------- |
+| `Video #`   | Index or ID of the video in the dataset                                             |
+| `Cell`      | Identifier for the cell in the video (if multiple cells are tracked)                |
+| `Track`     | Unique identifier for a single molecule’s trajectory                                |
+| `Event`     | Index of the event (e.g., first event = 0, second event = 1, etc.) within the track       |
+| `time`      | Time or frame index at which the transition into the new state occurred |
+| `type`      | Type of event/state (see below)                                                     |
 
-5. `rebind-AllDiffusion-time.csv`
-all diffusion (fast + constrained) event durations.
-columns include: [Video #,	Cell,	Track,	Event (diffusive (FD, CD),	Diffusion Time]
-6. `rebind-strict-rebindingtime.csv`
-The duration of each rebinding event within the track. (The rebinding time is the diffusion time between two binding events) 
-columns include: [Video #,	Cell,	Track,	Event (diffusion between two binding),	Rebinding Time]
+type values (event categories):
+
+| Type            | Description                                                               |
+| --------------- | ------------------------------------------------------------------------- |
+| `Bound`         | Molecule remained in the immobile (bound) state                           |
+| `C.Diffusion`   | Confined diffusion: molecule shows restricted movement                    |
+| `FastDiffusion` | Free/fast diffusion: molecule moves relatively freely                     |
+| `SearchTime`    | Time between unbinding and next rebinding (i.e., unbound search interval) |
+| `Rebinding`     | Event marking the return to the bound state after unbinding               |
+
+
 
 # Visualizer.py
 Runnable Script if run as __main__
@@ -289,7 +283,7 @@ Whether to use output from gaps_and_fixes.py (True) or bound_classification.py (
 
 
 **Output**
-{csv_path}/{output_folder_name}/{mask_name}.tif
+{csv_path}/{output_folder_name}/Visualizer/{mask_name}.tif
 | Class/Behavior | Value in CSV | Color   | Drawn Tail? |
 | -------------- | ------------ | ------- | ----------- |
 | Diffusive        | `0`          | Magenta | ✅           |
