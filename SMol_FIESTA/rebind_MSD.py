@@ -121,12 +121,12 @@ def main(config_path: str = None):
     time_interval = time_interval_ms / 1000.0
     use_brownian_only = configs.get('MSD-analysis', {}).get('use_brownian_only', True)
 
-    frames_per_subdivision = 4  # Number of frames per subdivision
+    frames_per_subdivision = 6  # Number of frames per subdivision
     bin_scaling_factor = 0.75
     b = 0.0  # Localization error (in microns)
     T_int = 0.01  # Integration time in seconds
     T_exp = 0.01  # Exposure time in seconds
-    cutoff_bound = 0.02
+    cutoff_bound = 0.2
     cutoff_cdiffusion = 2.5
     cutoff_fdiffusion = 5
     min_bound = 0.0001

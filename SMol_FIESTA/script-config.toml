@@ -3,9 +3,9 @@
 # 1. Paths
 # ──────────────────────────────────────────────────────────────────────────────
 [path]
-csv_path             = 'C:\Users\JpRas\OneDrive\Escritorio\SearchAnalysis\wt\timelapse\AnalysisRebindCBC_start0_Quality5'      # Folder containing TrackMate CSV exports
-mask_path            = 'C:\Users\JpRas\OneDrive\Escritorio\SearchAnalysis\wt\seg\all'         # Folder of per-frame PNG masks (dimensions must match video)
-output_folder_name   = "Methods"     # Name for the pipeline’s output directory
+csv_path = 'C:\Users\JpRas\OneDrive\Escritorio\Analysis_PIPELINE\SIMULATION\src\single\test2\a\Test2_p001np02\Analysis2'
+mask_path            = 'C:\Users\JpRas\OneDrive\Escritorio\Analysis_PIPELINE\SIMULATION\src\seg'         # Folder of per-frame PNG masks (dimensions must match video)
+output_folder_name   = "Methods_p12np4"     # Name for the pipeline’s output directory
 one_csv_per_cell     = true # if true : one csv spots file per cell per video, if false: a single csv spots file per video
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -14,11 +14,11 @@ one_csv_per_cell     = true # if true : one csv spots file per cell per video, i
 [toggle]
 use_gap_fixed           = true   # Interpolate short detection gaps before reclassification
 filter_by_binding_prop  = true   # Drop tracks whose bound+constrained fraction is out of range
-run_visualizer          = true   # Generate colored overlay videos of track behaviors
-run_MSD_calculations    = true   # Compute and plot Mean Squared Displacement (MSD) curves
+run_visualizer          = false   # Generate colored overlay videos of track behaviors
+run_MSD_calculations    = false   # Compute and plot Mean Squared Displacement (MSD) curves
 run_fixed_particle      = false   # Execute experimental ComDet-based rebinding analysis
-bacteria_analysis       = true   # Aggressive overlap filtering for single-molecule (bacterial) data
-two_exponential_analysis= true
+bacteria_analysis       = false   # Aggressive overlap filtering for single-molecule (bacterial) data
+two_exponential_analysis= false
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 3. Track-Sorting
@@ -26,7 +26,7 @@ two_exponential_analysis= true
 [track-sorting]
 allowed_gap_max           = 10    # Max consecutive missing frames before splitting a track
 allowed_track_length_min  = 60    # Discard tracks shorter than this (frames)
-allowed_track_length_max  = 1500  # Discard tracks longer than this (frames)
+allowed_track_length_max  = 1500000000000000  # Discard tracks longer than this (frames)
 allowed_overlap           = 30    # Overlap frames threshold for collision resolution
 concurrent_max            = 10 # Max consecutive frames with >1 simultaneous spots
 
@@ -34,18 +34,18 @@ concurrent_max            = 10 # Max consecutive frames with >1 simultaneous spo
 # 4. Bound-Classification
 # ──────────────────────────────────────────────────────────────────────────────
 [bound-classification]
-distance_threshold         = 2.6   # px: relaxed binding step threshold over ±4-frame window
-distance_threshold_strict  = 1.2   # px: strict binding threshold (low false-pos) for high-framerate
+distance_threshold         = 0.4   # px: relaxed binding step threshold over ±4-frame window
+distance_threshold_strict  = 0.12   # px: strict binding threshold (low false-pos) for high-framerate
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. Gaps-&-Fixes
 # ──────────────────────────────────────────────────────────────────────────────
 [gaps-and-fixes]
 min_time_strict            = 4      # frames: min length for strict-binding; shorter ⇒ constrained
-min_time_constrained       = 4      # frames: min for constrained diffusion; shorter ⇒ free
+min_time_constrained       = 3      # frames: min for constrained diffusion; shorter ⇒ free
 min_time_diffusion         = 3      # frames: min for free diffusion; shorter ⇒ context reclassification
 max_bound_gapFill          = 4      # frames: gap allowance to merge into strict-binding
-min_prop_binding           = 0.08   # fraction: min track-level bound+constrained to keep
+min_prop_binding           = 0.00   # fraction: min track-level bound+constrained to keep
 max_prop_binding           = 1.01   # fraction: max track-level bound+constrained to keep
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ max_time_rebinding            = 100     # Reduce the limit for unsuccessful rebi
 # 7. MSD-Analysis
 # ──────────────────────────────────────────────────────────────────────────────
 [MSD-analysis]
-time_interval_ms     = 1000.0    # ms: frame interval (must match acquisition)
+time_interval_ms     = 10.0    # ms: frame interval (must match acquisition)
 pixel_size_um        = 0.130   # µm: physical pixel size for D calculations
 use_brownian_only    = true    # force anomalous exponent α = 1 (pure Brownian fit)
 

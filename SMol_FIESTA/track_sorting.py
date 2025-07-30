@@ -64,6 +64,7 @@ def main(config_path:str = None):
 
     dist_none = float('inf')
 
+
     # Output Format
     final_list_track_spots = []
     final_list_track_spots_columns = [
@@ -412,7 +413,16 @@ def parse_csv_by_mask(mask, csv, index):
     if csv is None:
         return None, None
     try:
-        data = np.loadtxt(csv, delimiter=',', dtype=float)
+        # peek at first line to see if it has any letters
+        with open(csv, 'r') as _f:
+            first = _f.readline()
+        skiprows = 1 if any(c.isalpha() for c in first) else 0
+
+        data = np.loadtxt(csv,
+                          delimiter=',',
+                          dtype=float,
+                          skiprows=skiprows)
+
     except ValueError as e:
         print(f"Error loading CSV file {csv}: {e}")
         return None, None
@@ -479,7 +489,16 @@ def parse_combined_spots_by_mask(mask, csv_path, n_cells):
     Each spot is represented as a list: [track ID, frame, x, y, intensity].
     """
     try:
-        data = np.loadtxt(csv_path, delimiter=',', dtype=float)
+        # peek at first line to see if it has any letters
+        with open(csv_path, 'r') as _f:
+            first = _f.readline()
+        skiprows = 1 if any(c.isalpha() for c in first) else 0
+
+        data = np.loadtxt(csv_path,
+                          delimiter=',',
+                          dtype=float,
+                          skiprows=skiprows)
+
     except ValueError as e:
         print(f"Error loading combined spots CSV {csv_path}: {e}")
         return [None] * n_cells

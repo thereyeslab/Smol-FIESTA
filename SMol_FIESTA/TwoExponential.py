@@ -91,15 +91,38 @@ def neg_log_likelihood_trunc(params, data, a):
     return -np.sum(np.log(likelihoods))
 
 
-def get_initial_parameters(data):
-    data_reshaped = data.reshape(-1, 1)
-    kmeans = KMeans(n_clusters=2, n_init=10, random_state=0).fit(data_reshaped)
-    labels = kmeans.labels_
-    cluster_centers = kmeans.cluster_centers_.flatten()
-    lambda1_initial = 1 / cluster_centers[0]
-    lambda2_initial = 1 / cluster_centers[1]
-    p1_initial = np.sum(labels == 0) / len(data)
-    return lambda1_initial, lambda2_initial, p1_initial
+def get_initial_parameters(data, n_runs=50):
+    """
+    Run KMeans 2-cluster n_runs times and pick the split with minimal inertia.
+    Returns (λ1_init, λ2_init, p1_init) where λ1 corresponds to the faster component.
+    """
+    X = data.reshape(-1,1)
+    best = {'inertia': np.inf}
+    for seed in range(n_runs):
+        km = KMeans(
+            n_clusters=2,
+            init='k-means++',
+            n_init=1,
+            random_state=seed
+        ).fit(X)
+        if km.inertia_ < best['inertia']:
+            best.update({
+                'inertia': km.inertia_,
+                'centers': km.cluster_centers_.flatten(),
+                'labels': km.labels_.copy(),
+            })
+    centers = best['centers']
+    labels  = best['labels']
+    # sort so index 0 = fast (smaller mean)
+    order = np.argsort(centers)
+    fast_mean, slow_mean = centers[order]
+    # relabel mask so that label 0 = fast cluster
+    mask_fast = (labels == order[0])
+    p1_init   = mask_fast.mean()
+    λ1_init   = 1.0 / fast_mean
+    λ2_init   = 1.0 / slow_mean
+    return λ1_init, λ2_init, p1_init
+
 
 def run_single_exponential_model(data, a=4.0):
     x_adj = data - a
@@ -342,8 +365,10 @@ def main(config_path:str = None):
             lambda1_s, mean_s, bic_s = run_single_exponential_model(data_vals, a=a)
             xlabel = 'Bound time' if event_type == 'Bound' else 'Diffusion time'
 
+            # inside your main() loop, replace the test_double branch with:
+
             if test_double:
-                results, data_vals, lambda1, lambda2, p1, p2 = run_mixture_model(
+                results, data_vals, λ1, λ2, p1, p2 = run_mixture_model(
                     data_path=data_path,
                     event_type=event_type,
                     max_iterations=100,
@@ -351,55 +376,62 @@ def main(config_path:str = None):
                     frameRate=frameRate
                 )
                 bic_d = results["BIC Double Exponential"]
+                # force to single-exp if double's weight fraction is too small or BIC not better
+                wf1 = results["Weight Fraction 1"]
+                wf2 = results["Weight Fraction 2"]
+                use_double = (bic_d < bic_s) and (min(wf1, wf2) >= 1e-4)
 
-                if bic_s < bic_d:
+                if not use_double:
+                    # single-exp branch
                     plt.figure(figsize=(8, 4))
                     plt.text(
                         0.1, 0.1,
                         f"{event_type} single-exp\nMean={mean_s:.3f}, λ={lambda1_s:.3f}, BIC single={bic_s:.1f}",
                         fontsize=12
                     )
-                    plt.axis('off');
+                    plt.axis('off')
                     pdf.savefig();
                     plt.close()
 
                     plot_results(data_vals, None, None, None, None, lambda1_s, mean_s)
-                    plt.xlabel(xlabel);
+                    plt.xlabel(xlabel)
                     pdf.savefig();
                     plt.close()
 
                     raw_df.loc[raw_df['type'] == event_type, 'Posterior_Prob_Exp1'] = 1.0
 
                 else:
+                    # double-exp branch
                     plt.figure(figsize=(8, 4))
                     plt.text(
                         0.1, 0.05,
                         '\n'.join(f"{k}: {v}" for k, v in results.items()),
                         fontsize=12
                     )
-                    plt.axis('off');
+                    plt.axis('off')
                     pdf.savefig();
                     plt.close()
 
-                    plot_results(data_vals, lambda1, lambda2, p1, p2)
-                    plt.xlabel(xlabel);
+                    plot_results(data_vals, λ1, λ2, p1, p2)
+                    plt.xlabel(xlabel)
                     pdf.savefig();
                     plt.close()
 
-                    plot_results_with_trendlines(data_vals, lambda1, lambda2, p1, p2)
-                    plt.xlabel(xlabel);
+                    plot_results_with_trendlines(data_vals, λ1, λ2, p1, p2)
+                    plt.xlabel(xlabel)
                     pdf.savefig();
                     plt.close()
 
-                    logistic_model = train_logistic_on_synthetic(lambda1, lambda2, a=a)
+                    logistic_model = train_logistic_on_synthetic(λ1, λ2, a=a)
                     x_adj = data_vals - a
-                    S1 = np.exp(-lambda1 * a)
-                    S2 = np.exp(-lambda2 * a)
-                    f1 = lambda1 * np.exp(-lambda1 * x_adj) / S1
-                    f2 = lambda2 * np.exp(-lambda2 * x_adj) / S2
+                    S1 = np.exp(-λ1 * a)
+                    S2 = np.exp(-λ2 * a)
+                    f1 = λ1 * np.exp(-λ1 * x_adj) / S1
+                    f2 = λ2 * np.exp(-λ2 * x_adj) / S2
                     llr = np.log(np.clip(f1, 1e-300, None) / np.clip(f2, 1e-300, None)).reshape(-1, 1)
                     post = logistic_model.predict_proba(llr)[:, 1]
                     raw_df.loc[raw_df['type'] == event_type, 'Posterior_Prob_Exp1'] = post
+
 
             else:
                 plt.figure(figsize=(8, 4))
