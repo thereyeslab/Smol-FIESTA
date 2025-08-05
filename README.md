@@ -5,17 +5,46 @@ A modular and reproducible microscopy video analysis pipeline to extract and qua
 
 This pipeline processes single-particle tracking data obtained from microscopy videos (e.g., using [TrackMate](https://www.sciencedirect.com/science/article/pii/S1046202316303346))
 
-For each spot in a molecule’s trajectory, it calculates the distance to neighboring spots in both past and future frames. Based on configurable thresholds and two classification criteria (strict and relaxed), each spot is assigned to one of the following states:
-- Bound
-- Constrained diffusion
-- Diffusive
 
-After the initial classification, additional filtering steps refine each track’s overall behavior by analyzing the type and duration of surrounding events. The pipeline then detects possible rebinding events within each trajectory and quantifies:
-- Average binding and rebinding durations
-- Frequency of state transitions
-- Proportions of binding states and rebinding events at the population level
 
-For diagrams, module details, and examples, see the `docs/` and `example_data/` directories.
+1. Tracking Initialization (Fiji TrackMate Script)
+Use the included `TrackMateScriptv2.py` to automate batch tracking in Fiji via command line. You can extract and export tracking data using segmentation masks and configuration from a .toml file.
+
+2. Threshold Calculation for Step Size Filtering
+Run `Thresh_calculator.py` to compute a noise-adjusted diffusion threshold based on pixel size, diffusion coefficient, and vibration noise. This threshold is used later to define diffusive vs. bound behavior.
+
+3. Track Processing and Binding Classification
+The main analysis pipeline (BatchRun_Rebind.py) processes all tracks to:
+
+- Filter short/noisy tracks
+
+- For each spot in a molecule’s trajectory, it calculates the distance to neighboring spots in both past and future frames. Based on configurable thresholds and two classification criteria (strict and relaxed), it assigns each spot in a trajectory a behavioral state:
+
+    - Bound
+
+    - Constrained Diffusion
+
+    - Diffusive
+
+- Fill gaps and interpolate short missing segments: After the initial classification, additional filtering steps refine each track’s overall behavior by analyzing the type and duration of surrounding events.
+
+- Quantify rebinding events: The pipeline then detects possible rebinding events within each trajectory and quantifies:
+    - Average binding and rebinding durations
+    - Frequency of state transitions
+     Proportions of binding states and rebinding events at the population level
+
+4. Kinetic Modeling via Two-Exponential Fit
+After classification, `TwoExponential.py` fits the dwell-time distribution to either a single or two-exponential model. This provides kinetic parameters for each molecular state, including:
+
+- Mean lifetimes (τ) (aka bound time or search time, depending on the inputs)
+
+- Decay rates (λ)
+
+- Transition probabilities
+
+- State assignment confidence per event
+
+For plots, module details, and examples, see the `docs/` and `example_data/` directories.
 
 
 **Inputs**
@@ -38,13 +67,15 @@ Grayscale images with unique integer labels per cell (0 = background).
 Recommended tool: [Cellpose](https://github.com/MouseLand/cellpose)
 
 **Outputs**
-# Decide later
 See `docs/input_output.md` and the `example_data/` folder for full output samples. Key outputs:
+- Threshold printout: From Thresh_calculator.py for filtering setup (Ancillary script)
 - bound_decisions.csv — Spot-level binding state for each frame
-- rebind-strict-boundtime.csv — Duration of binding events
-- rebind-strict-rebindingtime.csv — Duration between binding events
-- rebind-AllDiffusion-time.csv — Duration of all diffusion events
+- rebind-Events.csv - Duration, time and types of all events (binding, rebinding, constrained diffusion, fast diffusion, search time ) within each track
 - RESULT_rebind.csv — Summary statistics of rebinding
+- RESULT_rebind.txt - Summary statistics of binding behavior in more details
+- 2Exponential_test.pdf: Fitted exponential models of the event durations and histograms
+- Exp1_probabilities.csv: Posterior state probabilities per event
+- transition_probabilities.csv: Transition matrix between states
 - Diffusion_Coefficient_Calculation.csv — Track-level diffusion coefficients
 - Diffusion_Coefficient_Plots.pdf — Plots of diffusion coefficient distributions
 - Reconstructed videos — Simulated videos with color-coded spot behaviors
@@ -53,11 +84,16 @@ See `docs/input_output.md` and the `example_data/` folder for full output sample
 
 - Configurable and modular
 - Track-to-cell assignment from segmentation masks
+- Automated TrackMate ROI-based tracking via Fiji
+- Step-size threshold computation with vibration noise support, to be used for classifying the molecules binding states. 
 - Bound state classification based on two different cirteira (relaxed and strict)
 - Gap filing and interpolation.
 - Extra filtering steps for baceteria images. 
+- Rebinding detection and analysis of transition between states (outputting transition matrix)
+- Calculation of molecule's Search time for binding
 - Molecule Rebinding and binding event analysis
-- Compute and plot MSD distribution (Mean Squared Displacement)
+- MSD-based diffusion coefficient estimation (Mean Squared Displacement)
+- Two-exponential model fitting with posterior assignment to identify the mixed behaviors
 - Tabular + visual outputs
 - Statistical summaries
 - Real-time logging to easily track errors and monitor pipeline progress
@@ -89,7 +125,9 @@ pip install -e .
 ``` bash
 conda activate smol_env
 ```
-3. There are three different ways to run the pipeline: 
+3. Run threshold calculator (optional but recommended). You can use this to get a threshold for the step size used for binding behavior classification. See thresh_calculator.md for how to use this script. 
+4. Run TrackMateScriptv2 in batch mode in Fiji to get your tracks and spots files compatible to the pipeline. See TrackMateScriptV2.md for setup. You can skip this if you have spots.csv and tracks.csv files compatible with the pipeline. See input_outputs.md.
+5. Run main pipeline: There are three different ways to run the pipeline: 
 
 - A. Run via command line:
 ``` bash
@@ -131,14 +169,23 @@ SMol_FIESTA/
 │   ├── gaps_and_fixes.py
 |   ├── rebind_analysis.py
 |   ├── rebind_MSD.py
-|   ├── visualizer.py
+|   ├── TwoExponential.py
+├── visualizer.py
+| 
+├── Ancillary scripts 
+|   ├── Thresh_calculator.py
+|   ├── TrackmateScriptv2.py
+|   ├── thresh_calculator.md
+|   ├── TrackMateScriptV2.md
+|   ├── Trackmate_configFile.txt
 |
 ├── docs                    # Helpfull documentation
 ├── requirements.txt
 ├── setup.py
-├── srun_smol.bat           # For Windows
-├── srun_smol.command       # For Mac OS
+├── run_smol.bat           # For Windows
+├── run_smol.command       # For Mac OS
 ├── README.md
+├── pyproject.toml
 └── script-config.toml        # Example config file
 
 ```
