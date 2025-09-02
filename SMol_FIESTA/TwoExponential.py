@@ -167,7 +167,7 @@ def run_mixture_model(data_path, event_type=None, max_iterations=100, tolerance=
     # compute BIC for double exp
     neg_ll = neg_log_likelihood_trunc([l1, l2, p1], data, a)
     n = len(data)
-    bic_double = 2 * neg_ll + np.log(n) * 2  # two decay rates + one weight
+    bic_double = 2 * neg_ll + np.log(n) * 3  # two decay rates + one weight
 
     # corrected vs noncorrected means
     mean1_nc = 1 / l1
