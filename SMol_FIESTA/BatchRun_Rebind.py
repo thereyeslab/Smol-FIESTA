@@ -11,6 +11,7 @@ from SMol_FIESTA import rebind_analysis
 from SMol_FIESTA import rebind_MSD
 from SMol_FIESTA import rebind_fixed_particle
 from SMol_FIESTA import TwoExponential
+from SMol_FIESTA import bound_frac_bootstrapping
 from natsort import natsorted
 import numpy as np
 from skimage import io as imgio
@@ -94,7 +95,9 @@ def run_scripts():
 
         rebind_analysis.main(config_path)
         print("")
-
+        if toggles.get('run_bound_fraction_bootstrapping', False):
+            bound_frac_bootstrapping.main(config_path)
+            print("")
         if toggles.get('run_fixed_particle', False):
             rebind_fixed_particle.main(config_path)
             print("")

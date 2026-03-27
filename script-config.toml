@@ -7,6 +7,7 @@ one_csv_per_cell = true # if true : one csv spots file per cell per video, if fa
 
 [toggle]
 use_gap_fixed = true # for rebind-analysis to use gap-fixed
+run_bound_fraction_bootstrapping = true # Performe bootstrapping for the bound proportion
 filter_by_binding_prop = true # filter tracks after gap-fixes
 run_visualizer = true # run visualizer after analysis
 run_MSD_calculations = true # run MSD calculations after analysis
@@ -33,6 +34,11 @@ min_time_diffusion = 0
 max_bound_gapFill = 4
 min_prop_binding = 0.00 # for both constricted and strict, filter condition after gap-fixes
 max_prop_binding = 1.01 # filter also for all-bound tracks, most-likely dirt
+
+[bound-frac-bootstrapping]
+n_boot = 1000 # number of sampling
+random_state = 42 # random state of sampling to ensure reproducibility
+save_bootstrap_estimates = true
 
 [rebind-analysis]
 rebind_distance_same = 1.0 # Determines rebinds to same particles < parameter
