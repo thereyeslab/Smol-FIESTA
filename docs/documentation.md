@@ -219,6 +219,68 @@ and Separated tracks by event type: 2. Diffusing, 3. Constricted (CD), and 4. Bo
 - filtered_passed_spotsAll.csv ( the tracks that passed the binding proportions filtering step)
 - filtered_failed_spotsAll.csv (the tracks that did not pass the binding proportions filtering step)
 
+
+# bound_frac_bootstrapping.py
+This module estimates frame-level behavior proportions (F. Diffusion, C. Diffusion, Bound) and their uncertainty using bootstrap resampling.
+Unlike model-based approaches (e.g., GMM), this method computes proportions directly from deterministic per-frame classifications, providing a robust, assumption-light estimate of bound fraction.
+
+`Bootstrap strategies`
+
+Three resampling schemes are implemented to capture uncertainty at different biological/technical levels:
+
+1. Track-level bootstrap
+Resamples tracks with replacement
+Assumes tracks are independent
+Provides a lower-bound (optimistic) estimate of uncertainty
+2. Cell-level bootstrap
+Resamples cells with replacement
+Includes all tracks within each sampled cell
+Captures cell-to-cell biological variability
+Recommended for most biological interpretations
+3. Hierarchical bootstrap (cell → track)
+Resamples cells, then tracks within each cell
+Preserves data structure (tracks nested within cells)
+Provides a more conservative estimate accounting for both levels
+
+Input
+
+Reads from:
+
+bound_decisions.csv
+or
+gaps-and-fixes_decisions.csv (if enabled)
+
+Required columns:
+
+Video #
+Cell
+Track
+Frame
+Bound (0, 1, 2 labels)
+
+Output: 
+The module produces:
+
+Point estimates (original data proportions)
+Bootstrap means
+Standard errors (SE)
+95% confidence intervals (percentile method)
+
+Saved files:
+
+RESULT_bound_fraction_bootstrap.csv → summary table
+RESULT_bound_fraction_bootstrap.txt → formatted output
+
+Optional:
+bound_fraction_bootstrap_*_estimates.csv → raw bootstrap samples
+
+Key assumptions
+Frame-level labels are deterministic and correct
+Independence depends on bootstrap level:
+Track bootstrap → assumes independent tracks
+Cell bootstrap → assumes independent cells
+Hierarchical → respects nested structure
+
 # rebind_analysis.py
 
 This script identifies and analyzes rebinding events—cases where a molecule temporarily unbinds from a site (or changes its behavior) and later rebinds, either to the same location or to a different one, based on positional thresholds. It applies spatial and temporal criteria to classify a track into behavioral states and quantify their transitions over time. It works on single-molecule tracks that were previously processed for binding behavior (via bound_classification.py) and optionally gap-filled (via gaps_and_fixes.py).
