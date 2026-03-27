@@ -70,6 +70,7 @@ Recommended tool: [Cellpose](https://github.com/MouseLand/cellpose)
 See `docs/input_output.md` and the `example_data/` folder for full output samples. Key outputs:
 - Threshold printout: From Thresh_calculator.py for filtering setup (Ancillary script)
 - bound_decisions.csv — Spot-level binding state for each frame
+- bound_fraction_bootstrap_estimates.csv and RESULT_bound_fraction_bootstrap.csv - report of bootstrapping and 95% confidence interval for the bound proportion. 
 - rebind-Events.csv - Duration, time and types of all events (binding, rebinding, constrained diffusion, fast diffusion, search time ) within each track
 - RESULT_rebind.csv — Summary statistics of rebinding
 - RESULT_rebind.txt - Summary statistics of binding behavior in more details
@@ -88,6 +89,7 @@ See `docs/input_output.md` and the `example_data/` folder for full output sample
 - Step-size threshold computation with vibration noise support, to be used for classifying the molecules binding states. 
 - Bound state classification based on two different cirteira (relaxed and strict)
 - Gap filing and interpolation.
+- Bound proportion calculation with bootstrap resampling at the track-level, cell-level- and the hierarchical approache. 
 - Extra filtering steps for baceteria images. 
 - Rebinding detection and analysis of transition between states (outputting transition matrix)
 - Calculation of molecule's Search time for binding
@@ -169,6 +171,7 @@ SMol_FIESTA/
 │   ├── cell_info.py
 │   ├── bound_classification.py
 │   ├── gaps_and_fixes.py
+│   ├── bound_frac_bootstrapping.py
 |   ├── rebind_analysis.py
 |   ├── rebind_MSD.py
 |   ├── TwoExponential.py
