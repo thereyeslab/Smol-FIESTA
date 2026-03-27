@@ -205,27 +205,6 @@ The .toml config defines file paths, thresholds, toggles, and options for each m
 It is copied to the output folder for reproducibility.
 See `docs/config.md` for full documentation. 
 
-## Acknowledgment
-
-This work is based on the original SMol-FIESTA repository developed by the Reyes Lab.
-
-## My Contributions
-
-As part of the **Reyes Lab** development team, I worked on both **code development** and **project infrastructure**, with the goal of making the pipeline more robust, reproducible, and user-friendly. My main contributions include:
-
-- **Code development & refactoring** → contributed to the development of new functionality, reorganized existing modules, improved readability, and applied clean code principles. Suggested and implemented improvements to the overall workflow logic (e.g., feature extraction, motion classification, pipeline orchestration).  
-- **Deep code review ** → went through all scripts in detail to fully map the workflow, verify correctness, and document the design logic at the module level.  
-- **Documentation**  
-  - Authored detailed module-level documentation explaining how each component of the pipeline works and how to use it.  
-  - Created a dedicated document for **input/output data flow**, describing file formats, column definitions, and expected results.  
-  - Wrote a **troubleshooting guide**, anticipating common user issues (especially for non-technical users) and presenting solutions in a structured table format per module.  
-  - Authored a top-level **README.md** with setup instructions, usage examples, and overall guidance for new users.  
-- **Cross-platform usability** → tested the pipeline on macOS and Windows, and created launcher scripts.
-- **Testing & debugging** → ran the pipeline both end-to-end and module-by-module with example datasets to validate results.
-- **User experience improvements** → improved how outputs and intermediate results are represented, making the analysis easier to interpret and more consistent across runs.  
-- **Future development** → compiled a list of potential issues, enhancement ideas, and improvement opportunities to inform future versions of the project.  
-
-Overall, my work combined **code contributions, refactoring, and documentation** to strengthen the pipeline’s usability and maintainability for both technical and non-technical users.
 
 ## Contributors
 - Jose Pablo Rascon Perez
