@@ -161,6 +161,39 @@ Contains the original spot data with the added columns below:
 **Note**
 The Pass1, Pass2, and Pass3 columns store the intermediate behavior state at each relabeling pass. This provides traceability of how a spot's label evolved across steps.
 
+# bound_frac_bootstrapping.py
+This module estimates frame-level behavior proportions (F. Diffusion, C. Diffusion, Bound) and their uncertainty using bootstrap resampling.
+
+
+**Input**: 
+Reads from:
+
+bound_decisions.csv
+or
+gaps-and-fixes_decisions.csv (if enabled)
+
+Required columns:
+
+Video #
+Cell
+Track
+Frame
+Bound (0, 1, 2 labels)
+
+**ouputs**
+The module produces:
+
+Point estimates (original data proportions)
+Bootstrap means
+Standard errors (SE)
+95% confidence intervals (percentile method)
+
+Saved files:
+
+RESULT_bound_fraction_bootstrap.csv → summary table
+RESULT_bound_fraction_bootstrap.txt → formatted output
+Optional:
+bound_fraction_bootstrap_*_estimates.csv → raw bootstrap samples
 
 # rebind_analysis.py
 This script identifies and characterizes rebinding events in single-molecule tracks. It analyzes the dynamics of particles transitioning from bound states to free states and back to binding. It also evaluates whether the rebindings occur to the same molecular site or to different ones, based on spatial displacement.
