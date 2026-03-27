@@ -14,6 +14,7 @@
 | Parameter                 | Type | Description                                                                                  | Notes & use case                                                       |
 |---------------------------|------|----------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
 | `use_gap_fixed`           | bool | Interpolate short detection gaps before reclassification.                                     | Compare runs with & without: flip this to gauge effect of gap-filling. |
+| `run_bound_fraction_bootstrapping`           | bool | Performe bootstrapping for the bound proportion                                    |  |
 | `filter_by_binding_prop`  | bool | Drop tracks whose track-level (bound+constrained) fraction is outside `[min_prop_binding, max_prop_binding]`. | If you see zero output, try disabling or widening these bounds.        |
 | `run_visualizer`          | bool | Generate overlay videos showing track states (`green=bound`, `blue=constrained`, `red=fast`). | Disable for headless/batch runs to save time.                          |
 | `run_MSD_calculations`    | bool | Compute & plot MSD curves for each track.                                                    | Turn off if you only need rebinding stats.                             |
@@ -56,6 +57,12 @@
 | `max_prop_binding`      | float  | Max track-level bound+constrained fraction to retain a track.                  | Set > 0.99 to drop permanently stuck tracks or debris.                                       |
 
 ---
+### Bootstrapping for bound proportion
+| Parameter               | Type   | Description                                                                    | Notes & use case                                                                             |
+|-------------------------|--------|--------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
+| `n_boot`       | int    | Number of bootstrapp resampling     | deafult is 1000.                                                            |
+| `random_state`  | int    | random state(seed) of sampling to ensure reproducibility                 |  default is 42.                                          |
+| `save_bootstrap_estimates`    | bool    | save the outputs    |  true as default.               
 
 ### Rebind-Analysis
 
